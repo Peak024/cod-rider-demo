@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <title>SPX Express – แอปไรเดอร์และลูกค้า (เดโม)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Thai Font Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', system-ui, -apple-system, 'Segoe UI', sans-serif; background-color: #0f172a; -webkit-tap-highlight-color: transparent; }
+        .shopee-bg { background-color: #EE4D2D; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        /* Respect phone notches / home indicator when running full-screen on a real phone */
+        .safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+        .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+        @media (min-width: 640px) {
+            .safe-top { padding-top: 0.375rem; }
+            .safe-bottom { padding-bottom: 0.75rem; }
+        }
+    </style>
+</head>
+<!--
+    Layout:
+    - Phone (< 640px): the app fills the whole screen; the phone frame is dropped.
+    - Tablet / desktop (>= 640px): the app is shown inside a phone mock-up frame.
+-->
+<body class="h-[100dvh] sm:h-auto sm:min-h-screen flex flex-col items-center sm:justify-center sm:p-6 text-gray-800 overflow-hidden sm:overflow-auto">
+
+    <!-- Control bar: view switcher + language switcher -->
+    <div class="safe-top w-full sm:max-w-md shrink-0 bg-slate-800 px-2 pb-2 sm:p-1.5 sm:mb-4 sm:rounded-2xl shadow-xl flex items-center gap-2 sm:border sm:border-slate-700">
+        <div class="flex flex-1 gap-1.5 sm:gap-2 min-w-0" role="tablist">
+            <button id="btnTabRider" role="tab" aria-selected="true" onclick="switchView('rider')" class="tab-btn flex-1 min-w-0 py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
+                <i data-lucide="bike" class="w-4 h-4 shrink-0"></i> <span class="truncate" data-i18n="tabRider"></span>
+            </button>
+            <button id="btnTabCustomer" role="tab" aria-selected="false" onclick="switchView('customer')" class="tab-btn flex-1 min-w-0 py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
+                <i data-lucide="gift" class="w-4 h-4 shrink-0"></i> <span class="truncate" data-i18n="tabCustomer"></span>
+            </button>
+        </div>
+        <!-- Language switcher -->
+        <div class="shrink-0 flex bg-slate-900/70 rounded-xl p-0.5 border border-slate-700" role="group" aria-label="Language">
+            <button id="btnLangTh" onclick="setLang('th')" class="lang-btn px-2 sm:px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all">TH</button>
+            <button id="btnLangEn" onclick="setLang('en')" class="lang-btn px-2 sm:px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all">EN</button>
+        </div>
+    </div>
+
+    <!-- Phone frame (only drawn on >= 640px) -->
+    <div class="w-full flex-1 min-h-0 flex flex-col sm:flex-none sm:max-w-[390px] sm:bg-slate-900 sm:rounded-[48px] sm:p-3.5 sm:shadow-2xl sm:border-4 sm:border-slate-700 relative">
+        <!-- Phone Speaker & Camera Notch -->
+        <div class="hidden sm:flex w-36 h-5 bg-slate-900 absolute top-3 left-1/2 -translate-x-1/2 rounded-b-2xl z-40 items-center justify-center gap-2 border-b border-x border-slate-800">
+            <div class="w-3 h-3 rounded-full bg-slate-800 border border-slate-700"></div>
+            <div class="w-10 h-1 bg-slate-800 rounded-full"></div>
+        </div>
+
+        <!-- Screen -->
+        <div class="bg-gray-100 flex-1 min-h-0 flex flex-col relative overflow-hidden sm:flex-none sm:h-[730px] sm:rounded-[38px] sm:pt-6">
+
+            <!-- ======================================================== -->
+            <!-- VIEW 1: RIDER APP SCREEN -->
+            <!-- ======================================================== -->
+            <div id="viewRider" class="flex flex-col h-full min-h-0">
+                <!-- Top Header Bar -->
+                <div class="shopee-bg text-white px-4 py-3 shadow-md flex items-center justify-between gap-2 shrink-0">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <i data-lucide="arrow-left" class="w-5 h-5 shrink-0"></i>
+                        <div class="min-w-0">
+                            <h1 class="font-bold text-sm sm:text-sm leading-tight">SPX Express Delivery</h1>
+                            <p class="text-[11px] sm:text-[10px] text-orange-100 truncate" data-i18n="riderSubtitle"></p>
+                        </div>
+                    </div>
+                    <span class="shrink-0 text-[11px] sm:text-[10px] font-bold bg-white/20 px-2 py-1 rounded-lg" data-i18n="jobCounter"></span>
+                </div>
+
+                <!-- Main Scrollable Content -->
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-3 space-y-3">
+                    <div class="max-w-xl mx-auto space-y-3">
+
+                        <!-- Customer & Order Details Card -->
+                        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-200">
+                            <div class="flex justify-between items-start gap-2 border-b border-gray-100 pb-2.5 mb-2.5">
+                                <div class="min-w-0">
+                                    <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider" data-i18n="trackingLabel"></span>
+                                    <p class="font-bold text-xs text-gray-800">TH240988123490X</p>
+                                </div>
+                                <span class="shrink-0 bg-red-50 text-red-600 font-extrabold text-xs px-2.5 py-1 rounded-lg border border-red-100" data-i18n="codAmount"></span>
+                            </div>
+
+                            <!-- Customer Profile -->
+                            <div class="space-y-2 text-xs">
+                                <div class="flex items-center gap-2 text-gray-800 font-bold">
+                                    <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-extrabold text-xs shrink-0" data-i18n="customerInitials"></div>
+                                    <div>
+                                        <p class="leading-tight text-[13px] sm:text-xs" data-i18n="customerName"></p>
+                                        <span class="text-[11px] sm:text-[10px] text-emerald-600 font-normal" data-i18n="customerHistory"></span>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-2 text-gray-600 bg-gray-50 p-2 rounded-xl text-[12px] sm:text-[11px]">
+                                    <i data-lucide="map-pin" class="w-4 h-4 text-orange-500 shrink-0 mt-0.5"></i>
+                                    <span data-i18n="address"></span>
+                                </div>
+                                <div class="flex items-center gap-2 text-gray-600 text-[12px] sm:text-[11px] px-1 min-w-0">
+                                    <i data-lucide="package" class="w-3.5 h-3.5 text-gray-400 shrink-0"></i>
+                                    <span class="truncate" data-i18n="product"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Selector Title -->
+                        <div class="flex items-center justify-between gap-2 px-1 pt-1">
+                            <span class="text-xs sm:text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                                <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-orange-500 shrink-0"></i>
+                                <span data-i18n="chooseStatus"></span>
+                            </span>
+                            <span class="shrink-0 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200" data-i18n="gpsVerified"></span>
+                        </div>
+
+                        <!-- 4 Main Rider Buttons -->
+                        <div class="space-y-2">
+
+                            <!-- BUTTON 1: Normal Success -->
+                            <button onclick="triggerRiderAction('success')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-2xl shadow-sm transition-all flex items-center justify-between gap-2 text-left active:scale-[0.98]">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 sm:w-9 sm:h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                                        <i data-lucide="circle-check" class="w-5 h-5 text-white"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-[13px] sm:text-xs" data-i18n="btnSuccessTitle"></p>
+                                        <p class="text-[11px] sm:text-[10px] text-emerald-100" data-i18n="btnSuccessSub"></p>
+                                    </div>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-200 shrink-0"></i>
+                            </button>
+
+                            <!-- BUTTON 2: Changed Mind & Accepted (Saved Order Bonus) -->
+                            <button onclick="triggerRiderAction('saved')" class="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:brightness-105 text-white p-3 pt-5 rounded-2xl shadow-md transition-all flex items-center justify-between gap-2 text-left active:scale-[0.98] border-2 border-yellow-300 relative overflow-hidden">
+                                <div class="absolute right-0 top-0 bg-yellow-400 text-gray-900 font-extrabold text-[10px] sm:text-[9px] px-2.5 py-0.5 rounded-bl-xl shadow-sm whitespace-nowrap" data-i18n="riderBonusBadge"></div>
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 sm:w-9 sm:h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                                        <i data-lucide="sparkles" class="w-5 h-5 text-yellow-200"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-[13px] sm:text-xs" data-i18n="btnSavedTitle"></p>
+                                        <p class="text-[11px] sm:text-[10px] text-yellow-100" data-i18n="btnSavedSub"></p>
+                                    </div>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-yellow-100 shrink-0"></i>
+                            </button>
+
+                            <!-- BUTTON 3: Firm Rejection (Returned to hub) -->
+                            <button onclick="triggerRiderAction('reject')" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 p-3 rounded-2xl shadow-sm transition-all flex items-center justify-between gap-2 text-left active:scale-[0.98]">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 sm:w-9 sm:h-9 bg-rose-200/60 rounded-xl flex items-center justify-center shrink-0">
+                                        <i data-lucide="circle-x" class="w-5 h-5 text-rose-600"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-[13px] sm:text-xs" data-i18n="btnRejectTitle"></p>
+                                        <p class="text-[11px] sm:text-[10px] text-rose-500" data-i18n="btnRejectSub"></p>
+                                    </div>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-rose-400 shrink-0"></i>
+                            </button>
+
+                            <!-- BUTTON 4: Silent Rejection (Walked away / No response) -->
+                            <button onclick="triggerRiderAction('silent')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 p-3 rounded-2xl shadow-sm transition-all flex items-center justify-between gap-2 text-left active:scale-[0.98]">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 sm:w-9 sm:h-9 bg-slate-300/60 rounded-xl flex items-center justify-center shrink-0">
+                                        <i data-lucide="user-x" class="w-5 h-5 text-slate-700"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-[13px] sm:text-xs" data-i18n="btnSilentTitle"></p>
+                                        <p class="text-[11px] sm:text-[10px] text-slate-500" data-i18n="btnSilentSub"></p>
+                                    </div>
+                                </div>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rider Bottom Summary Bar -->
+                <div class="safe-bottom shrink-0 bg-white border-t border-gray-200 px-3 pt-3 text-xs flex items-center justify-between gap-2 shadow-lg">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>
+                        <span class="text-gray-600 text-[12px] sm:text-[11px] truncate" data-i18n-html="riderStatus"></span>
+                    </div>
+                    <span class="shrink-0 text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 text-[12px] sm:text-[11px]" data-i18n="bonusToday"></span>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- VIEW 2: CUSTOMER STREAK REWARDS SCREEN -->
+            <!-- ======================================================== -->
+            <div id="viewCustomer" class="hidden flex-col h-full min-h-0 bg-orange-50/40">
+                <!-- Top Header Bar -->
+                <div class="shopee-bg text-white px-4 py-3 shadow-md flex items-center justify-between gap-2 shrink-0">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <i data-lucide="shopping-bag" class="w-5 h-5 shrink-0"></i>
+                        <div class="min-w-0">
+                            <h1 class="font-bold text-sm leading-tight">Shopee Delivery Streak</h1>
+                            <p class="text-[11px] sm:text-[10px] text-orange-100 truncate" data-i18n="customerSubtitle"></p>
+                        </div>
+                    </div>
+                    <span class="shrink-0 bg-yellow-400 text-gray-900 font-extrabold text-[11px] sm:text-[10px] px-2.5 py-0.5 rounded-full shadow-sm" data-i18n="levelBadge"></span>
+                </div>
+
+                <!-- Customer Content Area -->
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 safe-bottom">
+                    <div class="max-w-xl mx-auto space-y-3">
+
+                        <!-- Banner Card -->
+                        <div class="bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 text-white rounded-2xl p-4 shadow-md relative overflow-hidden">
+                            <div class="absolute -right-3 -bottom-3 opacity-20">
+                                <i data-lucide="flame" class="w-28 h-28"></i>
+                            </div>
+                            <p class="text-[11px] sm:text-[10px] uppercase font-bold text-orange-200 tracking-wider" data-i18n="bannerEyebrow"></p>
+                            <h2 class="text-lg font-extrabold mt-0.5 leading-tight relative" data-i18n="bannerTitle"></h2>
+                            <div class="mt-3 inline-flex items-center gap-2 bg-black/30 px-3 py-1.5 rounded-xl text-xs border border-white/20 relative">
+                                <i data-lucide="flame" class="w-4 h-4 text-yellow-300 fill-yellow-300 animate-bounce"></i>
+                                <span data-i18n-html="currentStreak"></span>
+                            </div>
+                        </div>
+
+                        <!-- Streak Milestones Progress Card -->
+                        <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-orange-100 space-y-2.5">
+                            <h3 class="font-bold text-xs text-gray-800 flex items-center justify-between gap-2">
+                                <span class="flex items-center gap-1.5">
+                                    <i data-lucide="trophy" class="w-4 h-4 text-orange-500"></i>
+                                    <span data-i18n="milestonesTitle"></span>
+                                </span>
+                                <span class="text-[10px] text-gray-400 font-normal text-right" data-i18n="milestonesNote"></span>
+                            </h3>
+
+                            <!-- Milestone 1: Completed -->
+                            <div class="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200 flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center justify-center shadow-sm shrink-0">✓</div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-xs text-gray-800" data-i18n="m1Title"></p>
+                                        <p class="text-[11px] sm:text-[10px] text-emerald-600 font-semibold" data-i18n="m1Reward"></p>
+                                    </div>
+                                </div>
+                                <span class="shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md" data-i18n="unlocked"></span>
+                            </div>
+
+                            <!-- Milestone 2: Active / Current Goal -->
+                            <div class="bg-amber-50 p-2.5 rounded-xl border-2 border-amber-400 flex items-center justify-between gap-2 shadow-sm">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-full bg-amber-400 text-gray-900 font-extrabold text-[11px] flex items-center justify-center shrink-0">2/5</div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-xs text-gray-800" data-i18n="m2Title"></p>
+                                        <p class="text-[11px] sm:text-[10px] text-amber-800 font-bold" data-i18n="m2Reward"></p>
+                                    </div>
+                                </div>
+                                <span class="shrink-0 text-[10px] font-bold text-amber-900 bg-amber-200 px-2 py-1 rounded-md animate-pulse" data-i18n="m2Remaining"></span>
+                            </div>
+
+                            <!-- Milestone 3: Locked -->
+                            <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-200 flex items-center justify-between gap-2 opacity-60">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 font-bold text-[11px] flex items-center justify-center shrink-0">2/10</div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-xs text-gray-700" data-i18n="m3Title"></p>
+                                        <p class="text-[11px] sm:text-[10px] text-gray-500" data-i18n="m3Reward"></p>
+                                    </div>
+                                </div>
+                                <i data-lucide="lock" class="w-4 h-4 text-gray-400 shrink-0"></i>
+                            </div>
+                        </div>
+
+                        <!-- Warning Rule Box -->
+                        <div class="bg-red-50 p-3 rounded-xl border border-red-200 text-red-700 space-y-1">
+                            <div class="font-bold text-xs flex items-center gap-1.5 text-red-800">
+                                <i data-lucide="triangle-alert" class="w-4 h-4 text-red-600 shrink-0"></i>
+                                <span data-i18n="warningTitle"></span>
+                            </div>
+                            <p class="text-[11px] sm:text-[10px] leading-relaxed text-red-600" data-i18n-html="warningBody"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <p class="hidden sm:block mt-4 text-[11px] text-slate-500" data-i18n="demoNote"></p>
+
+    <!-- Interactive Action Modal (Pop-up Simulator) -->
+    <div id="interactiveModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-end sm:items-center justify-center sm:p-4 z-50" onclick="if (event.target === this) closeInteractiveModal()">
+        <div id="modalBox" role="dialog" aria-modal="true" aria-labelledby="modalTitle" class="bg-white w-full sm:max-w-sm max-h-[90dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-5 safe-bottom shadow-2xl border border-gray-100 transform transition-all translate-y-4 sm:translate-y-0 sm:scale-95 opacity-0 duration-200">
+            <div id="modalHeaderIcon" class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-3"></div>
+            <h3 id="modalTitle" class="font-extrabold text-base text-center text-gray-800 mb-1"></h3>
+            <p id="modalDescription" class="text-[13px] sm:text-xs text-gray-600 leading-relaxed text-center mb-4"></p>
+
+            <!-- Interactive Dynamic Area (e.g., Coupon Offer / Photo Upload / Confirmation) -->
+            <div id="modalInteractiveArea" class="mb-4"></div>
+
+            <!-- Action Button -->
+            <button onclick="closeInteractiveModal()" class="w-full shopee-bg text-white py-3 sm:py-2.5 rounded-xl text-sm sm:text-xs font-bold shadow-lg hover:brightness-105 active:scale-[0.98]" data-i18n="modalClose"></button>
+        </div>
+    </div>
+
+    <script>
+        // ------------------------------------------------------------------
+        // Translations
+        // ------------------------------------------------------------------
+        const I18N = {
+            th: {
+                pageTitle: 'SPX Express – แอปไรเดอร์และลูกค้า (เดโม)',
+                tabRider: 'แอปไรเดอร์',
+                tabCustomer: 'สตรีคลูกค้า',
+                riderSubtitle: 'งานส่งพัสดุเก็บเงินปลายทาง (COD)',
+                jobCounter: 'งานที่ 14/28',
+                trackingLabel: 'เลขพัสดุ',
+                codAmount: 'ยอด COD ฿550',
+                customerInitials: 'สช',
+                customerName: 'คุณสมชาย ใจดี',
+                customerHistory: 'ประวัติรับพัสดุดี · สตรีค Lv.2',
+                address: '88/9 ซอยสุขุมวิท 55 แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110',
+                product: 'เสื้อแจ็กเก็ตกันหนาวแฟชั่นเกาหลี (สีดำ ไซซ์ L)',
+                chooseStatus: 'เลือกสถานะการจัดส่ง',
+                gpsVerified: 'ยืนยัน GPS แล้ว',
+                btnSuccessTitle: '1. จัดส่งสำเร็จ (ลูกค้ารับของตามปกติ)',
+                btnSuccessSub: 'ลูกค้าชำระเงินสด/QR เรียบร้อย',
+                riderBonusBadge: '🎁 โบนัสไรเดอร์ +฿15',
+                btnSavedTitle: '2. ลูกค้าปฏิเสธ แล้วเปลี่ยนใจรับของ',
+                btnSavedSub: 'เสนอโค้ดส่วนลดหน้างาน → ลูกค้ายอมรับ',
+                btnRejectTitle: '3. ลูกค้าปฏิเสธเด็ดขาด (ตีกลับ)',
+                btnRejectSub: 'เสนอคูปองแล้วยังยืนยันไม่รับ → ส่งคืน Hub',
+                btnSilentTitle: '4. ลูกค้าปฏิเสธแล้วเดินหนี',
+                btnSilentSub: 'ไม่กดยืนยัน → ถ่ายรูปหน้าบ้านเพื่อปิดงาน',
+                riderStatus: 'สถานะไรเดอร์: <strong class="text-gray-800">ออนไลน์</strong>',
+                bonusToday: 'โบนัสวันนี้ +฿45',
+
+                customerSubtitle: 'ภารกิจรับพัสดุต่อเนื่อง',
+                levelBadge: 'เลเวล 2',
+                bannerEyebrow: 'รับพัสดุทุกชิ้น ไม่ปล่อยไรเดอร์รอเก้อ',
+                bannerTitle: 'สะสมสตรีค รับคูปองส่วนลด!',
+                currentStreak: 'สตรีคปัจจุบัน: <strong class="text-yellow-300 text-sm font-extrabold">ติดต่อกัน 2 ครั้ง</strong>',
+                milestonesTitle: 'ขั้นรางวัลสตรีค',
+                milestonesNote: 'อัปเดตทุกครั้งที่รับพัสดุ',
+                m1Title: 'รับสำเร็จติดต่อกัน 3 ครั้ง',
+                m1Reward: 'รับโค้ดส่วนลด ฿30',
+                unlocked: 'ปลดล็อกแล้ว',
+                m2Title: 'รับสำเร็จติดต่อกัน 5 ครั้ง',
+                m2Reward: 'รับโค้ดส่วนลด ฿50',
+                m2Remaining: 'อีก 3 ครั้ง',
+                m3Title: 'รับสำเร็จติดต่อกัน 10 ครั้ง',
+                m3Reward: 'รับโค้ดส่วนลด ฿100',
+                warningTitle: 'เงื่อนไขสำคัญของสตรีค',
+                warningBody: '* หากคุณปฏิเสธรับพัสดุหน้างาน หรือติดต่อไม่ได้จนพัสดุถูกตีกลับ <strong>สตรีคจะถูกรีเซ็ตเป็น 0 ทันที</strong> และอาจถูกระงับสิทธิ์ชำระเงินปลายทาง (COD)',
+
+                demoNote: 'เดโมต้นแบบแนวคิด · ไม่ใช่แอปที่ใช้งานจริง',
+                modalClose: 'รับทราบ',
+
+                successTitle: 'จัดส่งสำเร็จ',
+                successDesc: 'บันทึกการจัดส่งเรียบร้อย ลูกค้าชำระเงิน COD ครบ ฿550 และรับพัสดุแล้ว',
+                successStreak: '🎉 ลูกค้าได้รับแต้มสตรีค +1',
+
+                savedTitle: 'กู้ออเดอร์สำเร็จ! (ลูกค้าเปลี่ยนใจรับของ)',
+                savedDesc: 'ไรเดอร์เสนอคูปองส่วนลดหน้างาน ลูกค้าเปลี่ยนใจ ชำระเงินและรับพัสดุ',
+                savedDiscount: 'ส่วนลดหน้างานของลูกค้า:',
+                savedPaid: 'ยอดที่ลูกค้าชำระ:',
+                savedBonus: 'โบนัสไรเดอร์ที่กู้ออเดอร์ได้:',
+
+                rejectTitle: 'ยืนยันการปฏิเสธรับพัสดุ (ตีกลับ)',
+                rejectDesc: 'ไรเดอร์เสนอส่วนลดหน้างานแล้ว แต่ลูกค้ายังยืนยันไม่รับพัสดุ ระบบจะบันทึกสถานะตีกลับและส่งพัสดุคืน Hub',
+                rejectPrompt: '⚠️ เลือกเหตุผลที่ลูกค้าปฏิเสธ:',
+                rejectReasons: [
+                    'เปลี่ยนใจ ไม่ต้องการสินค้าแล้ว',
+                    'สั่งผิดขนาด / สี / รุ่น',
+                    'ไม่มีเงินสดชำระค่า COD',
+                    'รอสินค้านานเกินไป'
+                ],
+                rejectNote: '* สตรีคของผู้ซื้อจะถูกรีเซ็ตเป็น 0 และระบบจะบันทึกประวัติพัสดุตีกลับ',
+
+                silentTitle: 'บันทึกการปฏิเสธแบบเงียบ (Silent Rejection)',
+                silentDesc: 'ลูกค้าปฏิเสธแล้วเดินหนี หรือไม่ยอมกดยืนยัน ไรเดอร์ถ่ายรูปหน้าบ้านเป็นหลักฐานเพื่อปิดงานทันที (Fast-Close)',
+                photoPrompt: 'แตะเพื่อจำลองการถ่ายภาพหน้าบ้าน/ประตู',
+                photoHint: 'ระบบแนบพิกัด GPS และเวลาให้อัตโนมัติ',
+                gpsLabel: '📍 พิกัด GPS:',
+                verified: 'ยืนยันแล้ว',
+                photoSaved: 'บันทึกรูปหลักฐานแล้ว'
+            },
+            en: {
+                pageTitle: 'SPX Express – Rider & Customer App (Demo)',
+                tabRider: 'Rider app',
+                tabCustomer: 'Customer streak',
+                riderSubtitle: 'Cash-on-delivery (COD) job',
+                jobCounter: 'Job 14/28',
+                trackingLabel: 'Tracking number',
+                codAmount: 'COD ฿550',
+                customerInitials: 'SJ',
+                customerName: 'Khun Somchai Jaidee',
+                customerHistory: 'Good pickup history · Streak Lv.2',
+                address: '88/9 Soi Sukhumvit 55, Khlong Tan Nuea, Watthana, Bangkok 10110',
+                product: 'Korean-style winter jacket (Black, size L)',
+                chooseStatus: 'Select delivery outcome',
+                gpsVerified: 'GPS verified',
+                btnSuccessTitle: '1. Delivered (customer accepted)',
+                btnSuccessSub: 'Customer paid by cash / QR',
+                riderBonusBadge: '🎁 Rider bonus +฿15',
+                btnSavedTitle: '2. Refused, then changed their mind',
+                btnSavedSub: 'Offered an on-the-spot discount → accepted',
+                btnRejectTitle: '3. Firmly refused (return to hub)',
+                btnRejectSub: 'Still refused after the coupon → back to hub',
+                btnSilentTitle: '4. Refused and walked away',
+                btnSilentSub: 'No confirmation → photo of the door to close job',
+                riderStatus: 'Rider status: <strong class="text-gray-800">Online</strong>',
+                bonusToday: 'Today\'s bonus +฿45',
+
+                customerSubtitle: 'Consecutive pickup challenge',
+                levelBadge: 'Level 2',
+                bannerEyebrow: 'Accept every parcel, never leave the rider hanging',
+                bannerTitle: 'Build your streak, earn discount codes!',
+                currentStreak: 'Current streak: <strong class="text-yellow-300 text-sm font-extrabold">2 in a row</strong>',
+                milestonesTitle: 'Streak rewards',
+                milestonesNote: 'Updated after every pickup',
+                m1Title: '3 successful pickups in a row',
+                m1Reward: 'Get a ฿30 discount code',
+                unlocked: 'Unlocked',
+                m2Title: '5 successful pickups in a row',
+                m2Reward: 'Get a ฿50 discount code',
+                m2Remaining: '3 to go',
+                m3Title: '10 successful pickups in a row',
+                m3Reward: 'Get a ฿100 discount code',
+                warningTitle: 'Important streak rules',
+                warningBody: '* If you refuse a parcel at the door, or can\'t be reached and the parcel is returned, <strong>your streak resets to 0 immediately</strong> and cash on delivery (COD) may be suspended for your account.',
+
+                demoNote: 'Concept demo · not a live app',
+                modalClose: 'Got it',
+
+                successTitle: 'Delivered',
+                successDesc: 'Delivery recorded. The customer paid the full ฿550 COD amount and received the parcel.',
+                successStreak: '🎉 Customer earned +1 streak point',
+
+                savedTitle: 'Order saved! (customer changed their mind)',
+                savedDesc: 'The rider offered an on-the-spot discount coupon, and the customer changed their mind, paid and accepted the parcel.',
+                savedDiscount: 'On-the-spot discount:',
+                savedPaid: 'Customer paid:',
+                savedBonus: 'Order-save bonus for rider:',
+
+                rejectTitle: 'Confirm refusal (return to hub)',
+                rejectDesc: 'The rider offered a discount, but the customer still refused the parcel. It will be marked as returned and sent back to the hub.',
+                rejectPrompt: '⚠️ Select the customer\'s reason:',
+                rejectReasons: [
+                    'Changed mind / no longer wants it',
+                    'Ordered the wrong size / colour / model',
+                    'No cash to pay the COD amount',
+                    'Waited too long for the order'
+                ],
+                rejectNote: '* The buyer\'s streak resets to 0 and a return is logged on their history.',
+
+                silentTitle: 'Log silent rejection',
+                silentDesc: 'The customer refused and walked away, or wouldn\'t confirm. The rider takes a photo of the door as proof to fast-close the job.',
+                photoPrompt: 'Tap to simulate a photo of the house / door',
+                photoHint: 'GPS location and timestamp are attached automatically',
+                gpsLabel: '📍 GPS:',
+                verified: 'Verified',
+                photoSaved: 'Proof photo saved'
+            }
+        };
+
+        let lang = 'th';
+        let currentAction = null;   // which modal is open, so it can be re-rendered on language change
+        let photoTaken = false;
+
+        const t = (key) => I18N[lang][key];
+
+        function readSavedLang() {
+            try {
+                const saved = localStorage.getItem('codDemoLang');
+                if (saved === 'th' || saved === 'en') return saved;
+            } catch (e) { /* storage unavailable */ }
+            return (navigator.language || '').toLowerCase().startsWith('th') ? 'th' : 'en';
+        }
+
+        function setLang(next) {
+            lang = next;
+            try { localStorage.setItem('codDemoLang', next); } catch (e) { /* storage unavailable */ }
+            applyLang();
+        }
+
+        function applyLang() {
+            document.documentElement.lang = lang;
+            document.title = t('pageTitle');
+            document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+            document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+
+            const on = 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow';
+            const off = 'text-slate-400 hover:text-white';
+            const btnTh = document.getElementById('btnLangTh');
+            const btnEn = document.getElementById('btnLangEn');
+            btnTh.className = 'lang-btn px-2 sm:px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all ' + (lang === 'th' ? on : off);
+            btnEn.className = 'lang-btn px-2 sm:px-2.5 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all ' + (lang === 'en' ? on : off);
+            btnTh.setAttribute('aria-pressed', lang === 'th');
+            btnEn.setAttribute('aria-pressed', lang === 'en');
+
+            if (currentAction) renderModal(currentAction);
+        }
+
+        // ------------------------------------------------------------------
+        // View switching
+        // ------------------------------------------------------------------
+        function switchView(view) {
+            const btnRider = document.getElementById('btnTabRider');
+            const btnCustomer = document.getElementById('btnTabCustomer');
+            const viewRider = document.getElementById('viewRider');
+            const viewCustomer = document.getElementById('viewCustomer');
+
+            // Toggle "flex" together with "hidden" so the visible view keeps its column layout.
+            const show = (el) => { el.classList.remove('hidden'); el.classList.add('flex'); };
+            const hide = (el) => { el.classList.add('hidden'); el.classList.remove('flex'); };
+
+            const isRider = view === 'rider';
+            (isRider ? show : hide)(viewRider);
+            (isRider ? hide : show)(viewCustomer);
+            styleTab(btnRider, isRider);
+            styleTab(btnCustomer, !isRider);
+        }
+
+        function styleTab(btn, active) {
+            btn.classList.remove('font-bold', 'font-semibold', 'bg-gradient-to-r', 'from-orange-500', 'to-red-500', 'text-white', 'shadow-lg', 'text-slate-300', 'hover:text-white', 'hover:bg-slate-700/50');
+            if (active) btn.classList.add('font-bold', 'bg-gradient-to-r', 'from-orange-500', 'to-red-500', 'text-white', 'shadow-lg');
+            else btn.classList.add('font-semibold', 'text-slate-300', 'hover:text-white', 'hover:bg-slate-700/50');
+            btn.setAttribute('aria-selected', active);
+        }
+
+        // ------------------------------------------------------------------
+        // Rider action modal (the 4 scenarios)
+        // ------------------------------------------------------------------
+        const GPS = '13.7320, 100.5815';
+
+        function renderModal(actionType) {
+            const iconArea = document.getElementById('modalHeaderIcon');
+            const titleArea = document.getElementById('modalTitle');
+            const descArea = document.getElementById('modalDescription');
+            const area = document.getElementById('modalInteractiveArea');
+            const iconBase = 'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-3 ';
+
+            if (actionType === 'success') {
+                iconArea.className = iconBase + 'bg-emerald-100 text-emerald-600 shadow-sm';
+                iconArea.innerHTML = '<i data-lucide="circle-check" class="w-8 h-8"></i>';
+                titleArea.textContent = t('successTitle');
+                descArea.textContent = t('successDesc');
+                area.innerHTML = `
+                    <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-emerald-800 text-xs text-center font-semibold">
+                        ${t('successStreak')}
+                    </div>`;
+            }
+            else if (actionType === 'saved') {
+                iconArea.className = iconBase + 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md animate-pulse';
+                iconArea.innerHTML = '<i data-lucide="sparkles" class="w-8 h-8"></i>';
+                titleArea.textContent = t('savedTitle');
+                descArea.textContent = t('savedDesc');
+                area.innerHTML = `
+                    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 p-3 rounded-xl space-y-2">
+                        <div class="flex justify-between items-center gap-2 text-xs">
+                            <span class="text-gray-600 font-medium">${t('savedDiscount')}</span>
+                            <span class="font-bold text-orange-600">-฿20</span>
+                        </div>
+                        <div class="flex justify-between items-center gap-2 text-xs">
+                            <span class="text-gray-600 font-medium">${t('savedPaid')}</span>
+                            <span class="font-bold text-gray-800">฿530</span>
+                        </div>
+                        <div class="flex justify-between items-center gap-2 text-xs border-t border-amber-200 pt-1.5">
+                            <span class="text-gray-700 font-bold">${t('savedBonus')}</span>
+                            <span class="shrink-0 font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded">+฿15</span>
+                        </div>
+                    </div>`;
+            }
+            else if (actionType === 'reject') {
+                const prev = document.getElementById('rejectReason');
+                const selected = prev ? prev.value : '0';
+                iconArea.className = iconBase + 'bg-rose-100 text-rose-600 shadow-sm';
+                iconArea.innerHTML = '<i data-lucide="circle-x" class="w-8 h-8"></i>';
+                titleArea.textContent = t('rejectTitle');
+                descArea.textContent = t('rejectDesc');
+                area.innerHTML = `
+                    <div class="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-700 text-xs space-y-2">
+                        <label for="rejectReason" class="block font-bold text-center">${t('rejectPrompt')}</label>
+                        <select id="rejectReason" class="w-full text-sm sm:text-xs p-2.5 sm:p-2 rounded-lg border border-rose-200 bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-rose-400">
+                            ${t('rejectReasons').map((r, i) => `<option value="${i}"${String(i) === selected ? ' selected' : ''}>${r}</option>`).join('')}
+                        </select>
+                        <div class="p-2 bg-rose-100/70 rounded-lg text-[11px] sm:text-[10px] text-rose-800 text-center">${t('rejectNote')}</div>
+                    </div>`;
+            }
+            else if (actionType === 'silent') {
+                iconArea.className = iconBase + 'bg-slate-100 text-slate-700 shadow-sm';
+                iconArea.innerHTML = '<i data-lucide="camera" class="w-8 h-8"></i>';
+                titleArea.textContent = t('silentTitle');
+                descArea.textContent = t('silentDesc');
+                const photoBox = photoTaken
+                    ? `<div id="photoBox" class="border-2 border-emerald-400 bg-emerald-50 rounded-2xl p-3.5 text-center text-emerald-800">
+                           <div class="flex items-center justify-center gap-2 mb-1">
+                               <i data-lucide="circle-check-big" class="w-5 h-5 text-emerald-600"></i>
+                               <span class="font-bold text-xs">${t('photoSaved')}</span>
+                           </div>
+                           <p class="text-[10px] text-emerald-600 break-all">Proof_Location_13.7320_100.5815.jpg</p>
+                       </div>`
+                    : `<button id="photoBox" type="button" onclick="simulateTakePhoto()" class="w-full border-2 border-dashed border-slate-300 bg-slate-50 rounded-2xl p-3.5 text-center hover:bg-slate-100 transition-all active:scale-95">
+                           <i data-lucide="camera" class="w-7 h-7 text-slate-500 mx-auto mb-1 animate-bounce"></i>
+                           <p class="text-xs font-bold text-slate-700">${t('photoPrompt')}</p>
+                           <p class="text-[11px] sm:text-[10px] text-slate-400">${t('photoHint')}</p>
+                       </button>`;
+                area.innerHTML = `
+                    <div class="space-y-2">
+                        ${photoBox}
+                        <div class="bg-slate-100 p-2 rounded-xl text-[11px] sm:text-[10px] text-slate-600 flex justify-between items-center gap-2 border border-slate-200">
+                            <span>${t('gpsLabel')} <strong class="text-slate-800">${GPS}</strong></span>
+                            <span class="shrink-0 text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">${t('verified')}</span>
+                        </div>
+                    </div>`;
+            }
+
+            lucide.createIcons();
+        }
+
+        function triggerRiderAction(actionType) {
+            const modal = document.getElementById('interactiveModal');
+            const modalBox = document.getElementById('modalBox');
+
+            currentAction = actionType;
+            photoTaken = false;
+            document.getElementById('modalInteractiveArea').innerHTML = '';
+            renderModal(actionType);
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modalBox.classList.remove('translate-y-4', 'sm:scale-95', 'opacity-0');
+                modalBox.classList.add('sm:scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        // Simulate taking a proof photo for silent rejection
+        function simulateTakePhoto() {
+            photoTaken = true;
+            renderModal('silent');
+        }
+
+        function closeInteractiveModal() {
+            const modal = document.getElementById('interactiveModal');
+            const modalBox = document.getElementById('modalBox');
+            currentAction = null;
+            modalBox.classList.remove('sm:scale-100', 'opacity-100');
+            modalBox.classList.add('translate-y-4', 'sm:scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 150);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && currentAction) closeInteractiveModal();
+        });
+
+        // ------------------------------------------------------------------
+        // Init
+        // ------------------------------------------------------------------
+        lang = readSavedLang();
+        switchView('rider');
+        applyLang();
+        lucide.createIcons();
+    </script>
+</body>
+</html>
