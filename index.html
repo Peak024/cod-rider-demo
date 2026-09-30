@@ -19,6 +19,11 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         /* Respect phone notches / home indicator when running full-screen on a real phone */
+        .no-scrollbar { scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .airmail { background: repeating-linear-gradient(-45deg, #6fa6d6 0 22px, #fff 22px 30px, #f18d9b 30px 52px, #fff 52px 60px); }
+        @keyframes nudge { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .nudge { animation: nudge .3s ease-in-out 2; }
         .safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
         .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
         @media (min-width: 640px) {
@@ -35,13 +40,22 @@
 <body class="h-[100dvh] sm:h-auto sm:min-h-screen flex flex-col items-center sm:justify-center sm:p-6 text-gray-800 overflow-hidden sm:overflow-auto">
 
     <!-- Control bar: view switcher + language switcher -->
-    <div class="safe-top w-full sm:max-w-md shrink-0 bg-slate-800 px-2 pb-2 sm:p-1.5 sm:mb-4 sm:rounded-2xl shadow-xl flex items-center gap-2 sm:border sm:border-slate-700">
-        <div class="flex flex-1 gap-1.5 sm:gap-2 min-w-0" role="tablist">
-            <button id="btnTabRider" role="tab" aria-selected="true" onclick="switchView('rider')" class="tab-btn flex-1 min-w-0 py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
+    <div class="safe-top w-full shrink-0 bg-slate-800 px-2 pb-2 sm:p-1.5 sm:mb-4 sm:rounded-2xl sm:max-w-3xl shadow-xl flex items-center gap-2 sm:border sm:border-slate-700">
+        <div class="flex flex-1 gap-1.5 sm:gap-2 min-w-0 overflow-x-auto no-scrollbar" role="tablist">
+            <button id="btnTabRider" role="tab" aria-selected="true" onclick="switchView('rider')" class="tab-btn shrink-0 md:shrink md:flex-1 md:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
                 <i data-lucide="bike" class="w-4 h-4 shrink-0"></i> <span class="truncate" data-i18n="tabRider"></span>
             </button>
-            <button id="btnTabCustomer" role="tab" aria-selected="false" onclick="switchView('customer')" class="tab-btn flex-1 min-w-0 py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
+            <button id="btnTabCustomer" role="tab" aria-selected="false" onclick="switchView('customer')" class="tab-btn shrink-0 md:shrink md:flex-1 md:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
                 <i data-lucide="gift" class="w-4 h-4 shrink-0"></i> <span class="truncate" data-i18n="tabCustomer"></span>
+            </button>
+            <button id="btnTabGreen" role="tab" aria-selected="false" onclick="switchView('green')" class="tab-btn shrink-0 md:shrink md:flex-1 md:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30 shrink-0"></span> <span class="truncate" data-i18n="tabGreen"></span>
+            </button>
+            <button id="btnTabYellow" role="tab" aria-selected="false" onclick="switchView('yellow')" class="tab-btn shrink-0 md:shrink md:flex-1 md:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-400/30 shrink-0"></span> <span class="truncate" data-i18n="tabYellow"></span>
+            </button>
+            <button id="btnTabRed" role="tab" aria-selected="false" onclick="switchView('red')" class="tab-btn shrink-0 md:shrink md:flex-1 md:min-w-0 py-2.5 px-3 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 sm:gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-rose-500/30 shrink-0"></span> <span class="truncate" data-i18n="tabRed"></span>
             </button>
         </div>
         <!-- Language switcher -->
@@ -286,6 +300,11 @@
                 </div>
             </div>
 
+            <!-- ======================================================== -->
+            <!-- VIEWS 3-5: CHECKOUT FOR GREEN / YELLOW / RED CUSTOMERS (rendered by renderCheckout) -->
+            <!-- ======================================================== -->
+            <div id="viewCheckout" class="hidden flex-col h-full min-h-0 bg-gray-100"></div>
+
         </div>
     </div>
 
@@ -502,27 +521,36 @@
             btnTh.setAttribute('aria-pressed', lang === 'th');
             btnEn.setAttribute('aria-pressed', lang === 'en');
 
+            if (TIER_VIEWS.includes(currentView)) renderCheckout(currentView);
             if (currentAction) renderModal(currentAction);
         }
 
         // ------------------------------------------------------------------
         // View switching
         // ------------------------------------------------------------------
+        const TABS = { rider: 'btnTabRider', customer: 'btnTabCustomer', green: 'btnTabGreen', yellow: 'btnTabYellow', red: 'btnTabRed' };
+        const TIER_VIEWS = ['green', 'yellow', 'red'];
+        let currentView = 'rider';
+
         function switchView(view) {
-            const btnRider = document.getElementById('btnTabRider');
-            const btnCustomer = document.getElementById('btnTabCustomer');
-            const viewRider = document.getElementById('viewRider');
-            const viewCustomer = document.getElementById('viewCustomer');
+            currentView = view;
+            const isTier = TIER_VIEWS.includes(view);
+            const panes = {
+                viewRider: view === 'rider',
+                viewCustomer: view === 'customer',
+                viewCheckout: isTier
+            };
 
             // Toggle "flex" together with "hidden" so the visible view keeps its column layout.
-            const show = (el) => { el.classList.remove('hidden'); el.classList.add('flex'); };
-            const hide = (el) => { el.classList.add('hidden'); el.classList.remove('flex'); };
+            for (const [id, visible] of Object.entries(panes)) {
+                const el = document.getElementById(id);
+                el.classList.toggle('hidden', !visible);
+                el.classList.toggle('flex', visible);
+            }
+            for (const [key, id] of Object.entries(TABS)) styleTab(document.getElementById(id), key === view);
+            document.getElementById(TABS[view]).scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
-            const isRider = view === 'rider';
-            (isRider ? show : hide)(viewRider);
-            (isRider ? hide : show)(viewCustomer);
-            styleTab(btnRider, isRider);
-            styleTab(btnCustomer, !isRider);
+            if (isTier) renderCheckout(view, true);
         }
 
         function styleTab(btn, active) {
@@ -530,6 +558,349 @@
             if (active) btn.classList.add('font-bold', 'bg-gradient-to-r', 'from-orange-500', 'to-red-500', 'text-white', 'shadow-lg');
             else btn.classList.add('font-semibold', 'text-slate-300', 'hover:text-white', 'hover:bg-slate-700/50');
             btn.setAttribute('aria-selected', active);
+        }
+
+        // ------------------------------------------------------------------
+        // Checkout for Green / Yellow / Red customers
+        //   green  → normal checkout, COD available
+        //   yellow → COD only with a 20% deposit paid in the app first
+        //   red    → COD suspended, prepay only
+        // Same ฿550 parcel as the rider screen, so the three are directly comparable.
+        // ------------------------------------------------------------------
+        const PRICE = { item: 510, ship: 40 };
+        const TOTAL = PRICE.item + PRICE.ship;
+        const DEPOSIT = Math.round(TOTAL * 0.2);
+        const METHODS = ['cod', 'spay', 'card', 'qr'];
+        const METHOD_ICON = { cod: 'banknote', spay: 'wallet', card: 'credit-card', qr: 'qr-code' };
+        const payChoice = { green: 'cod', yellow: 'cod', red: 'spay' };
+
+        const CUSTOMERS = {
+            green:  { phone: '(+66) 81 234 5678',
+                      th: { name: 'สมชาย ใจดี', addr: '88/9 ซอยสุขุมวิท 55 แขวงคลองตันเหนือ เขตวัฒนา กรุงเทพฯ 10110' },
+                      en: { name: 'Somchai Jaidee', addr: '88/9 Soi Sukhumvit 55, Khlong Tan Nuea, Watthana, Bangkok 10110' } },
+            yellow: { phone: '(+66) 92 555 0142',
+                      th: { name: 'วิภาดา ศรีสุข', addr: '12/4 ถนนพหลโยธิน แขวงสามเสนใน เขตพญาไท กรุงเทพฯ 10400' },
+                      en: { name: 'Wipada Srisuk', addr: '12/4 Phahonyothin Rd, Samsen Nai, Phaya Thai, Bangkok 10400' } },
+            red:    { phone: '(+66) 63 555 0199',
+                      th: { name: 'ธนพล มั่นคง', addr: '45 หมู่ 3 ตำบลบางพูด อำเภอปากเกร็ด นนทบุรี 11120' },
+                      en: { name: 'Thanapon Mankong', addr: '45 Moo 3, Bang Phut, Pak Kret, Nonthaburi 11120' } }
+        };
+
+        const TIER_STYLE = {
+            green:  { strip: 'bg-emerald-50 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
+            yellow: { strip: 'bg-amber-50 text-amber-900 border-amber-200', dot: 'bg-amber-400',
+                      box: 'bg-amber-50 border-amber-300 text-amber-900', icon: 'shield-alert', iconColor: 'text-amber-600', why: 'bg-white/70 border-amber-200' },
+            red:    { strip: 'bg-rose-50 text-rose-800 border-rose-200', dot: 'bg-rose-500',
+                      box: 'bg-rose-50 border-rose-300 text-rose-900', icon: 'ban', iconColor: 'text-rose-600', why: 'bg-white/70 border-rose-200' }
+        };
+
+        Object.assign(I18N.th, {
+            tabGreen: 'ลูกค้าสีเขียว', tabYellow: 'ลูกค้าสีเหลือง', tabRed: 'ลูกค้าสีแดง',
+            coTitle: 'ทำการสั่งซื้อ',
+            coStrip_green: 'ลูกค้ากลุ่มสีเขียว · เก็บเงินปลายทางได้ตามปกติ',
+            coStrip_yellow: 'ลูกค้ากลุ่มสีเหลือง · COD ต้องชำระมัดจำก่อน',
+            coStrip_red: 'ลูกค้ากลุ่มสีแดง · ไม่มี COD ต้องชำระล่วงหน้า',
+            coAddrTitle: 'ที่อยู่ในการจัดส่ง',
+            coChat: 'แชทเลย',
+            coProduct: 'เสื้อแจ็กเก็ตกันหนาวแฟชั่นเกาหลี',
+            coVariation: 'ตัวเลือกสินค้า: สีดำ, L',
+            coMsg: 'ข้อความ:', coMsgPh: 'ฝากข้อความถึงผู้ขาย',
+            coShipTitle: 'ตัวเลือกการจัดส่ง', coShipName: 'SPX Express · ส่งธรรมดา', coShipEta: 'จะได้รับภายใน 3–5 วัน',
+            coOrderTotal: 'ยอดสั่งซื้อทั้งหมด (1 ชิ้น):',
+            coPayTitle: 'วิธีการชำระเงิน',
+            coM_cod: 'เก็บเงินปลายทาง', coM_spay: 'ShopeePay', coM_card: 'บัตรเครดิต/บัตรเดบิต', coM_qr: 'QR พร้อมเพย์',
+            coMsub_cod_green: 'ชำระเงินสดกับไรเดอร์เมื่อได้รับสินค้า',
+            coMsub_cod_yellow: 'มัดจำ {deposit} ตอนนี้ · ที่เหลือ {rest} ชำระปลายทาง',
+            coMsub_cod_red: 'ระงับชั่วคราวถึง {date}',
+            coMsub_spay: 'ชำระทันทีจากยอดเงินใน ShopeePay',
+            coMsub_card: 'Visa, Mastercard, JCB',
+            coMsub_qr: 'สแกนจ่ายผ่านแอปธนาคาร',
+            coBadgeDeposit: 'ต้องมัดจำ', coBadgeLocked: 'ใช้ไม่ได้',
+            coDetails: 'รายละเอียดการชำระเงิน',
+            coSubtotal: 'รวมการสั่งซื้อ', coShipping: 'การจัดส่ง', coGrand: 'ยอดชำระเงินทั้งหมด',
+            coPayNow: 'ชำระตอนนี้ (มัดจำ)', coPayLater: 'ชำระปลายทาง',
+            coBarTotal: 'ยอดชำระทั้งหมด', coBarNow: 'ชำระตอนนี้ {x}',
+            coPlace: 'สั่งสินค้า',
+
+            coY_title: 'การเก็บเงินปลายทางต้องชำระมัดจำ {deposit}',
+            coY_body: 'เพื่อยืนยันว่าคุณจะรับพัสดุ กรุณาชำระมัดจำ 20% ผ่านแอปก่อน ส่วนที่เหลือ {rest} ชำระกับไรเดอร์ตอนรับของ',
+            coWhy_yellow: 'ทำไมต้องชำระมัดจำ',
+            coY_reasons: [
+                'บัญชีเพิ่งเปิดใช้งานได้ 25 วัน ยังมีประวัติการรับพัสดุน้อย',
+                'ปฏิเสธรับพัสดุ COD 1 ครั้งใน 90 วันที่ผ่านมา',
+                'ระบบระบุตำแหน่งที่อยู่จัดส่งได้ไม่ชัดเจน'
+            ],
+            coY_note: 'มัดจำเป็นส่วนหนึ่งของยอดชำระ ไม่ใช่ค่าธรรมเนียมเพิ่ม หากปฏิเสธรับพัสดุ มัดจำจะนำไปชดเชยค่าจัดส่งไป-กลับ',
+            coY_unlock: 'รับพัสดุสำเร็จติดต่อกัน 2 ครั้ง เพื่อกลับมาใช้ COD แบบไม่ต้องมัดจำ หรือเลือกชำระเต็มจำนวนด้านล่างได้เลย',
+
+            coR_title: 'ไม่สามารถใช้การเก็บเงินปลายทางได้ชั่วคราว',
+            coR_body: 'บัญชีของคุณถูกระงับการใช้ COD 30 วัน ถึง {date} กรุณาชำระเงินล่วงหน้าเพื่อสั่งซื้อต่อ',
+            coWhy_red: 'ทำไมถึงใช้ COD ไม่ได้',
+            coR_reasons: [
+                'ปฏิเสธรับพัสดุ COD 3 ครั้งใน 90 วันที่ผ่านมา (เกณฑ์ 3 ครั้ง)',
+                'รับพัสดุ COD ไม่สำเร็จ 22% ใน 12 เดือนที่ผ่านมา (เกณฑ์ 15%)'
+            ],
+            coR_unlock: 'COD จะกลับมาใช้ได้อัตโนมัติเมื่อครบกำหนด ระหว่างนี้ชำระผ่าน ShopeePay บัตร หรือ QR พร้อมเพย์ได้ตามปกติ',
+
+            orderDone: 'สั่งซื้อสำเร็จ',
+            orderCod: 'ชำระ {total} เป็นเงินสดกับไรเดอร์เมื่อได้รับสินค้า',
+            orderDeposit: 'ชำระมัดจำ {deposit} แล้ว ชำระส่วนที่เหลือ {rest} กับไรเดอร์เมื่อได้รับสินค้า',
+            orderPaid: 'ชำระเงิน {total} ผ่าน {method} เรียบร้อยแล้ว',
+            orderNote_green: '🎉 รับพัสดุสำเร็จเพื่อรับแต้มสตรีค +1',
+            orderNote_yellow: 'รับพัสดุครั้งนี้สำเร็จ นับเป็น 1 ใน 2 ครั้งที่ต้องทำเพื่อใช้ COD แบบไม่มัดจำ',
+            orderNote_red: 'COD จะกลับมาใช้ได้ในวันที่ {date}'
+        });
+
+        Object.assign(I18N.en, {
+            tabGreen: 'Green customer', tabYellow: 'Yellow customer', tabRed: 'Red customer',
+            coTitle: 'Checkout',
+            coStrip_green: 'Green customer · cash on delivery as normal',
+            coStrip_yellow: 'Yellow customer · COD needs a deposit first',
+            coStrip_red: 'Red customer · no COD, prepay only',
+            coAddrTitle: 'Delivery address',
+            coChat: 'Chat',
+            coProduct: 'Korean-style winter jacket',
+            coVariation: 'Variation: Black, L',
+            coMsg: 'Message:', coMsgPh: 'Leave a message for the seller',
+            coShipTitle: 'Shipping option', coShipName: 'SPX Express · Standard', coShipEta: 'Arrives in 3–5 days',
+            coOrderTotal: 'Order total (1 item):',
+            coPayTitle: 'Payment method',
+            coM_cod: 'Cash on delivery', coM_spay: 'ShopeePay', coM_card: 'Credit / debit card', coM_qr: 'PromptPay QR',
+            coMsub_cod_green: 'Pay the rider in cash when it arrives',
+            coMsub_cod_yellow: '{deposit} deposit now · {rest} on delivery',
+            coMsub_cod_red: 'Suspended until {date}',
+            coMsub_spay: 'Pay now from your ShopeePay balance',
+            coMsub_card: 'Visa, Mastercard, JCB',
+            coMsub_qr: 'Scan to pay in your banking app',
+            coBadgeDeposit: 'Deposit', coBadgeLocked: 'Unavailable',
+            coDetails: 'Payment details',
+            coSubtotal: 'Merchandise subtotal', coShipping: 'Shipping', coGrand: 'Total payment',
+            coPayNow: 'Pay now (deposit)', coPayLater: 'Pay on delivery',
+            coBarTotal: 'Total', coBarNow: 'Pay now {x}',
+            coPlace: 'Place order',
+
+            coY_title: 'Cash on delivery needs a {deposit} deposit',
+            coY_body: 'To confirm you will accept the parcel, pay 20% in the app now and the remaining {rest} to the rider on delivery.',
+            coWhy_yellow: 'Why a deposit?',
+            coY_reasons: [
+                'Your account is only 25 days old, with little delivery history yet',
+                'You refused 1 COD parcel in the last 90 days',
+                'Your delivery address could not be located precisely'
+            ],
+            coY_note: 'The deposit is part of your total, not an extra fee. If the parcel is refused, it covers the two-way shipping cost.',
+            coY_unlock: 'Accept 2 deliveries in a row to use COD without a deposit again, or pay in full below.',
+
+            coR_title: 'Cash on delivery is temporarily unavailable',
+            coR_body: 'COD is suspended on your account for 30 days, until {date}. Please pay in advance to continue.',
+            coWhy_red: 'Why is COD unavailable?',
+            coR_reasons: [
+                '3 COD parcels refused in the last 90 days (limit: 3)',
+                '22% of your COD orders failed in the last 12 months (limit: 15%)'
+            ],
+            coR_unlock: 'COD comes back automatically when the suspension ends. Until then you can pay by ShopeePay, card or PromptPay QR as usual.',
+
+            orderDone: 'Order placed',
+            orderCod: 'Pay {total} in cash to the rider when it arrives.',
+            orderDeposit: 'Your {deposit} deposit is paid. Pay the remaining {rest} to the rider on delivery.',
+            orderPaid: 'You paid {total} with {method}.',
+            orderNote_green: '🎉 Accept the parcel to earn +1 streak point',
+            orderNote_yellow: 'Accepting this parcel counts as 1 of the 2 deliveries needed to drop the deposit.',
+            orderNote_red: 'COD will be available again on {date}.'
+        });
+
+        const baht = (n) => '฿' + n.toLocaleString('en-US');
+        const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+        function suspendUntil() {
+            const d = new Date();
+            d.setDate(d.getDate() + 30);
+            return d.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        function amounts(tier) {
+            const choice = payChoice[tier];
+            const deposit = choice === 'cod' && tier === 'yellow';
+            const now = choice !== 'cod' ? TOTAL : deposit ? DEPOSIT : 0;
+            return { choice, deposit, now, later: TOTAL - now };
+        }
+
+        function renderCheckout(tier, resetScroll) {
+            const root = document.getElementById('viewCheckout');
+            const oldScroll = root.querySelector('[data-scroll]');
+            const keepTop = !resetScroll && oldScroll ? oldScroll.scrollTop : 0;
+
+            const who = CUSTOMERS[tier];
+            const person = who[lang];
+            const st = TIER_STYLE[tier];
+            const a = amounts(tier);
+            const vars = { deposit: baht(DEPOSIT), rest: baht(TOTAL - DEPOSIT), date: suspendUntil(), total: baht(TOTAL) };
+            const row = (label, value, cls = '') => `<div class="flex justify-between gap-3 ${cls}"><span>${label}</span><span class="shrink-0">${value}</span></div>`;
+
+            // Why-box for yellow and red: what the customer has to do, and the reasons behind it.
+            const notice = tier === 'green' ? '' : `
+                <div id="tierNotice" class="mx-3 mt-2 p-3 rounded-xl border ${st.box}">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="${st.icon}" class="w-5 h-5 ${st.iconColor} shrink-0 mt-0.5"></i>
+                        <div class="min-w-0">
+                            <p class="font-bold text-[13px] leading-snug">${fill(t(tier === 'yellow' ? 'coY_title' : 'coR_title'), vars)}</p>
+                            <p class="text-[12px] leading-relaxed mt-0.5">${fill(t(tier === 'yellow' ? 'coY_body' : 'coR_body'), vars)}</p>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 p-2.5 rounded-lg border ${st.why}">
+                        <p class="font-bold text-[12px] flex items-center gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5"></i>${t('coWhy_' + tier)}</p>
+                        <ul class="mt-1 space-y-1 text-[12px] leading-snug list-disc pl-5">
+                            ${t(tier === 'yellow' ? 'coY_reasons' : 'coR_reasons').map(r => `<li>${r}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ${tier === 'yellow' ? `<p class="text-[11px] leading-relaxed mt-2 opacity-90">${t('coY_note')}</p>` : ''}
+                    <p class="text-[11px] leading-relaxed mt-1.5 font-semibold flex items-start gap-1.5">
+                        <i data-lucide="lock-open" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i><span>${fill(t(tier === 'yellow' ? 'coY_unlock' : 'coR_unlock'), vars)}</span>
+                    </p>
+                </div>`;
+
+            const methods = METHODS.map(m => {
+                const locked = m === 'cod' && tier === 'red';
+                const selected = a.choice === m;
+                const sub = m === 'cod' ? fill(t('coMsub_cod_' + tier), vars) : t('coMsub_' + m);
+                const badge = m === 'cod' && tier === 'yellow'
+                    ? `<span class="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">${t('coBadgeDeposit')}</span>`
+                    : locked ? `<span class="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200">${t('coBadgeLocked')}</span>` : '';
+                return `
+                    <button type="button" onclick="selectPay('${tier}','${m}')" aria-pressed="${selected}" ${locked ? 'aria-disabled="true"' : ''}
+                        class="w-full flex items-center gap-3 px-4 py-3 text-left border-t border-gray-100 first:border-t-0 ${locked ? 'bg-gray-50' : 'hover:bg-orange-50/40'}">
+                        <i data-lucide="${locked ? 'lock' : METHOD_ICON[m]}" class="w-5 h-5 shrink-0 ${locked ? 'text-gray-400' : 'text-[#EE4D2D]'}"></i>
+                        <span class="flex-1 min-w-0">
+                            <span class="flex items-center flex-wrap text-[13px] ${locked ? 'text-gray-400 line-through' : 'text-gray-800'}">${t('coM_' + m)}${badge}</span>
+                            <span class="block text-[11px] ${locked ? 'text-rose-500' : m === 'cod' && tier === 'yellow' ? 'text-amber-700' : 'text-gray-500'}">${sub}</span>
+                        </span>
+                        <span class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${selected ? 'border-[#EE4D2D]' : 'border-gray-300'}">
+                            ${selected ? '<span class="w-2.5 h-2.5 rounded-full bg-[#EE4D2D]"></span>' : ''}
+                        </span>
+                    </button>`;
+            }).join('');
+
+            root.innerHTML = `
+                <!-- Header -->
+                <div class="bg-white px-3 py-3 flex items-center gap-3 border-b border-gray-200 shrink-0">
+                    <i data-lucide="arrow-left" class="w-5 h-5 text-[#EE4D2D] shrink-0"></i>
+                    <h1 class="text-base font-medium text-gray-800">${t('coTitle')}</h1>
+                </div>
+                <!-- Which demo customer this is (annotation, not part of the Shopee screen) -->
+                <div class="px-3 py-1.5 text-[11px] font-semibold border-b flex items-center gap-2 shrink-0 ${st.strip}">
+                    <span class="w-2 h-2 rounded-full ${st.dot} shrink-0"></span>${t('coStrip_' + tier)}
+                </div>
+
+                <div data-scroll class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-2">
+                    <!-- Address -->
+                    <div class="bg-white">
+                        <div class="px-4 py-3 flex items-start gap-3">
+                            <i data-lucide="map-pin" class="w-5 h-5 text-[#EE4D2D] shrink-0 mt-0.5"></i>
+                            <div class="flex-1 min-w-0 text-[13px]">
+                                <p class="text-[#EE4D2D] text-xs mb-0.5">${t('coAddrTitle')}</p>
+                                <p class="text-gray-800 font-medium">${person.name} <span class="text-gray-400 font-normal">| ${who.phone}</span></p>
+                                <p class="text-gray-600 leading-snug">${person.addr}</p>
+                            </div>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 shrink-0 mt-1"></i>
+                        </div>
+                        <div class="airmail h-[3px]"></div>
+                    </div>
+
+                    <!-- Shop + item + shipping -->
+                    <div class="bg-white mt-2">
+                        <div class="px-4 py-2.5 flex items-center gap-2 text-[13px] border-b border-gray-100">
+                            <span class="text-[10px] font-bold text-white bg-[#EE4D2D] px-1 rounded-sm">Mall</span>
+                            <span class="font-medium text-gray-800 truncate">KoreaStyle Closet</span>
+                            <span class="ml-auto shrink-0 text-[11px] text-[#EE4D2D] flex items-center gap-1"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i>${t('coChat')}</span>
+                        </div>
+                        <div class="px-4 py-3 flex gap-3 bg-gray-50/60">
+                            <div class="w-16 h-16 rounded bg-slate-800 flex items-center justify-center shrink-0">
+                                <i data-lucide="shirt" class="w-8 h-8 text-slate-300"></i>
+                            </div>
+                            <div class="flex-1 min-w-0 text-[13px]">
+                                <p class="text-gray-800 leading-snug line-clamp-2">${t('coProduct')}</p>
+                                <p class="text-[11px] text-gray-500 mt-0.5">${t('coVariation')}</p>
+                                <div class="flex justify-between mt-1.5"><span class="text-gray-800">${baht(PRICE.item)}</span><span class="text-gray-500">x1</span></div>
+                            </div>
+                        </div>
+                        <div class="px-4 py-2.5 flex items-center gap-3 text-[13px] border-t border-gray-100">
+                            <span class="text-gray-800 shrink-0">${t('coMsg')}</span>
+                            <input type="text" class="flex-1 min-w-0 text-right text-[13px] placeholder-gray-400 focus:outline-none bg-transparent" placeholder="${t('coMsgPh')}">
+                        </div>
+                        <div class="mx-4 mb-3 p-3 rounded border border-emerald-200 bg-emerald-50/50 text-[13px]">
+                            <div class="flex justify-between gap-2">
+                                <span class="text-emerald-700">${t('coShipTitle')}</span>
+                            </div>
+                            <div class="flex justify-between gap-2 mt-1">
+                                <span class="text-gray-800 font-medium">${t('coShipName')}</span>
+                                <span class="text-gray-800 shrink-0">${baht(PRICE.ship)}</span>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1"><i data-lucide="truck" class="w-3.5 h-3.5"></i>${t('coShipEta')}</p>
+                        </div>
+                        <div class="px-4 py-2.5 flex justify-end gap-2 text-[13px] border-t border-gray-100">
+                            <span class="text-gray-600">${t('coOrderTotal')}</span><span class="text-[#EE4D2D] font-medium">${baht(TOTAL)}</span>
+                        </div>
+                    </div>
+
+                    ${notice}
+
+                    <!-- Payment method -->
+                    <div class="bg-white mt-2">
+                        <p class="px-4 pt-3 pb-1 text-[13px] font-medium text-gray-800">${t('coPayTitle')}</p>
+                        <div>${methods}</div>
+                    </div>
+
+                    <!-- Payment details -->
+                    <div class="bg-white mt-2 px-4 py-3 text-[12px] text-gray-600 space-y-1.5">
+                        <p class="text-[13px] font-medium text-gray-800 mb-1">${t('coDetails')}</p>
+                        ${row(t('coSubtotal'), baht(PRICE.item))}
+                        ${row(t('coShipping'), baht(PRICE.ship))}
+                        ${row(t('coGrand'), baht(TOTAL), 'text-[14px] text-gray-800 pt-1.5 border-t border-gray-100 [&>span:last-child]:text-[#EE4D2D] [&>span:last-child]:font-semibold')}
+                        ${a.deposit ? row(t('coPayNow'), baht(a.now), 'text-amber-800 font-semibold') + row(t('coPayLater'), baht(a.later)) : ''}
+                    </div>
+                </div>
+
+                <!-- Bottom bar -->
+                <div class="safe-bottom shrink-0 bg-white border-t border-gray-200 flex items-stretch justify-end">
+                    <div class="flex flex-col items-end justify-center px-3 py-2 min-w-0">
+                        <span class="text-[12px] text-gray-700">${t('coBarTotal')} <span class="text-[#EE4D2D] text-base font-semibold">${baht(TOTAL)}</span></span>
+                        ${a.deposit ? `<span class="text-[11px] font-semibold text-amber-700">${fill(t('coBarNow'), { x: baht(a.now) })}</span>` : ''}
+                    </div>
+                    <button type="button" onclick="placeOrder('${tier}')" class="shopee-bg text-white text-sm font-medium px-7 hover:brightness-105 active:brightness-95">${t('coPlace')}</button>
+                </div>`;
+
+            lucide.createIcons();
+            root.querySelector('[data-scroll]').scrollTop = keepTop;
+        }
+
+        function selectPay(tier, method) {
+            if (tier === 'red' && method === 'cod') {
+                // COD is locked: point the customer at the explanation instead.
+                const box = document.getElementById('tierNotice');
+                box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                box.classList.remove('nudge');
+                void box.offsetWidth;
+                box.classList.add('nudge');
+                return;
+            }
+            payChoice[tier] = method;
+            renderCheckout(tier);
+        }
+
+        function placeOrder(tier) {
+            triggerRiderAction('order');
+        }
+
+        function renderOrderModal() {
+            const tier = currentView;
+            const a = amounts(tier);
+            const vars = { deposit: baht(DEPOSIT), rest: baht(TOTAL - DEPOSIT), date: suspendUntil(), total: baht(TOTAL), method: t('coM_' + a.choice) };
+            const iconArea = document.getElementById('modalHeaderIcon');
+            iconArea.className = 'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-3 bg-emerald-100 text-emerald-600 shadow-sm';
+            iconArea.innerHTML = '<i data-lucide="circle-check" class="w-8 h-8"></i>';
+            document.getElementById('modalTitle').textContent = t('orderDone');
+            document.getElementById('modalDescription').textContent =
+                fill(t(a.choice !== 'cod' ? 'orderPaid' : a.deposit ? 'orderDeposit' : 'orderCod'), vars);
+            const tone = { green: 'bg-emerald-50 border-emerald-200 text-emerald-800', yellow: 'bg-amber-50 border-amber-200 text-amber-900', red: 'bg-rose-50 border-rose-200 text-rose-800' }[tier];
+            document.getElementById('modalInteractiveArea').innerHTML =
+                `<div class="border p-3 rounded-xl text-xs text-center font-semibold ${tone}">${fill(t('orderNote_' + tier), vars)}</div>`;
         }
 
         // ------------------------------------------------------------------
@@ -543,6 +914,8 @@
             const descArea = document.getElementById('modalDescription');
             const area = document.getElementById('modalInteractiveArea');
             const iconBase = 'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-3 ';
+
+            if (actionType === 'order') { renderOrderModal(); lucide.createIcons(); return; }
 
             if (actionType === 'success') {
                 iconArea.className = iconBase + 'bg-emerald-100 text-emerald-600 shadow-sm';
