@@ -551,6 +551,7 @@
             document.getElementById(TABS[view]).scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
             voucherSheet = null;
+            confirmSheet = false;
             if (isTier) renderCheckout(view, true);
         }
 
@@ -578,6 +579,8 @@
         const voucherSel = { green: null, yellow: null, red: null };
         const voucherRemoved = { green: false, yellow: false, red: false };
         let voucherSheet = null;   // null when closed, otherwise the voucher id picked in the sheet (or '')
+        let confirmSheet = false;  // yellow customers confirm the order before it is placed
+        let confirmAgreed = false;
 
         const VOUCHERS = [
             { id: 'v50', min: 300, off: () => 50,
@@ -644,7 +647,21 @@
             orderVoucher: 'ใช้ Shopee Voucher ประหยัด {x}',
             orderNote_green: '🎉 รับพัสดุสำเร็จเพื่อรับแต้มสตรีค +1',
             orderNote_yellow: 'รับพัสดุสำเร็จติดต่อกัน 2 ครั้ง เพื่อใช้ COD แบบไม่ต้องมัดจำ',
-            orderNote_red: 'COD จะกลับมาใช้ได้ในวันที่ {date}'
+            orderNote_red: 'COD จะกลับมาใช้ได้ในวันที่ {date}',
+
+            cfTitle: 'ยืนยันคำสั่งซื้อ',
+            cfSubCod: 'คำสั่งซื้อเก็บเงินปลายทางนี้ต้องชำระมัดจำก่อน',
+            cfSubPaid: 'ตรวจสอบรายละเอียดก่อนชำระเงิน',
+            cfDeliverTo: 'จัดส่งถึง', cfPayMethod: 'วิธีชำระเงิน', cfItem: 'สินค้า',
+            cfTotal: 'ยอดชำระทั้งหมด',
+            cfDepositNow: 'ชำระมัดจำตอนนี้ (ผ่าน ShopeePay)',
+            cfOnDelivery: 'ชำระกับไรเดอร์ตอนรับของ',
+            cfPayNow: 'ชำระตอนนี้',
+            cfRiderCall: 'ไรเดอร์จะโทรหาคุณที่ {phone} ก่อนจัดส่ง กรุณารับสาย',
+            cfAgree: 'ฉันจะอยู่รับพัสดุตามที่อยู่นี้ และรับทราบว่าหากปฏิเสธรับพัสดุ มัดจำ {deposit} จะนำไปชดเชยค่าจัดส่งไป-กลับ',
+            cfCancel: 'ยกเลิก',
+            cfConfirmDeposit: 'ยืนยันและชำระมัดจำ {x}',
+            cfConfirmPay: 'ยืนยันและชำระ {x}'
         });
 
         Object.assign(I18N.en, {
@@ -690,7 +707,21 @@
             orderVoucher: 'Shopee Voucher saved you {x}',
             orderNote_green: '🎉 Accept the parcel to earn +1 streak point',
             orderNote_yellow: 'Accept 2 deliveries in a row to use COD without a deposit.',
-            orderNote_red: 'COD will be available again on {date}.'
+            orderNote_red: 'COD will be available again on {date}.',
+
+            cfTitle: 'Confirm your order',
+            cfSubCod: 'This cash-on-delivery order needs a deposit first',
+            cfSubPaid: 'Check the details before you pay',
+            cfDeliverTo: 'Deliver to', cfPayMethod: 'Payment', cfItem: 'Item',
+            cfTotal: 'Order total',
+            cfDepositNow: 'Deposit now (via ShopeePay)',
+            cfOnDelivery: 'Pay the rider on delivery',
+            cfPayNow: 'Pay now',
+            cfRiderCall: 'The rider will call {phone} before delivery. Please pick up.',
+            cfAgree: 'I\'ll be at this address to receive the parcel, and I understand that if I refuse it, the {deposit} deposit covers the two-way shipping.',
+            cfCancel: 'Cancel',
+            cfConfirmDeposit: 'Confirm & pay {x} deposit',
+            cfConfirmPay: 'Confirm & pay {x}'
         });
 
         const baht = (n) => '฿' + n.toLocaleString('en-US');
@@ -846,7 +877,8 @@
                     <button type="button" onclick="placeOrder('${tier}')" class="shopee-bg text-white text-sm font-medium px-7 hover:brightness-105 active:brightness-95">${t('coPlace')}</button>
                 </div>
 
-                ${voucherSheet !== null ? renderVoucherSheet(tier) : ''}`;
+                ${voucherSheet !== null ? renderVoucherSheet(tier) : ''}
+                ${confirmSheet ? renderConfirmSheet(tier) : ''}`;
 
             lucide.createIcons();
             root.querySelector('[data-scroll]').scrollTop = keepTop;
@@ -946,6 +978,83 @@
         }
 
         function placeOrder(tier) {
+            if (tier === 'yellow') {
+                confirmSheet = true;
+                confirmAgreed = false;
+                renderCheckout(tier);
+                return;
+            }
+            triggerRiderAction('order');
+        }
+
+        // Yellow customers review the order, and for COD agree to be there to
+        // receive it, before the deposit is taken.
+        function renderConfirmSheet(tier) {
+            const a = amounts(tier);
+            const who = CUSTOMERS[tier];
+            const cod = a.choice === 'cod';
+            const line = (label, value, cls = '') => `<div class="flex justify-between gap-3 ${cls}"><span>${label}</span><span class="shrink-0 text-right">${value}</span></div>`;
+            const canConfirm = !cod || confirmAgreed;
+
+            return `
+                <div class="absolute inset-0 z-40 bg-black/40 flex items-end" onclick="if (event.target === this) closeConfirmSheet()">
+                    <div role="dialog" aria-modal="true" aria-labelledby="cfTitle" class="w-full bg-white rounded-t-2xl max-h-[90%] flex flex-col">
+                        <div class="px-4 pt-4 pb-3 border-b border-gray-100 flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                <i data-lucide="${cod ? 'shield-check' : 'receipt'}" class="w-5 h-5"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h2 id="cfTitle" class="text-[15px] font-semibold text-gray-800">${t('cfTitle')}</h2>
+                                <p class="text-[12px] ${cod ? 'text-amber-700' : 'text-gray-500'}">${t(cod ? 'cfSubCod' : 'cfSubPaid')}</p>
+                            </div>
+                            <button type="button" onclick="closeConfirmSheet()" aria-label="${t('vClose')}" class="p-1 -m-1 text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+                        </div>
+
+                        <div class="px-4 py-3 space-y-3 overflow-y-auto custom-scrollbar text-[12px] text-gray-600">
+                            <div class="space-y-1.5">
+                                ${line(t('cfItem'), `${t('coProduct')} ×1`, '[&>span:last-child]:text-gray-800')}
+                                ${line(t('cfDeliverTo'), who[lang].name, '[&>span:last-child]:text-gray-800')}
+                                ${line(t('cfPayMethod'), t('coM_' + a.choice), '[&>span:last-child]:text-gray-800')}
+                            </div>
+
+                            <div class="rounded-xl border ${cod ? 'border-amber-200 bg-amber-50/60' : 'border-gray-200 bg-gray-50'} p-3 space-y-1.5">
+                                ${line(t('cfTotal'), baht(a.total), 'text-gray-800')}
+                                ${cod
+                                    ? line(t('cfDepositNow'), baht(a.now), 'text-amber-800 font-semibold text-[13px]')
+                                      + line(t('cfOnDelivery'), baht(a.later))
+                                    : line(t('cfPayNow'), baht(a.now), 'text-[#EE4D2D] font-semibold text-[13px]')}
+                            </div>
+
+                            ${cod ? `
+                            <p class="flex items-start gap-2"><i data-lucide="phone-call" class="w-4 h-4 text-[#EE4D2D] shrink-0 mt-0.5"></i><span>${fill(t('cfRiderCall'), { phone: who.phone })}</span></p>
+                            <label class="flex items-start gap-2.5 p-3 rounded-xl border ${confirmAgreed ? 'border-[#EE4D2D] bg-orange-50/50' : 'border-gray-200'} cursor-pointer">
+                                <input type="checkbox" ${confirmAgreed ? 'checked' : ''} onchange="toggleAgree(this.checked)" class="mt-0.5 w-4 h-4 accent-[#EE4D2D] shrink-0">
+                                <span class="text-gray-700 leading-relaxed">${fill(t('cfAgree'), { deposit: baht(a.now) })}</span>
+                            </label>` : ''}
+                        </div>
+
+                        <div class="safe-bottom border-t border-gray-100 px-4 pt-3 flex gap-2">
+                            <button type="button" onclick="closeConfirmSheet()" class="flex-1 py-2.5 rounded-md border border-gray-300 text-gray-700 text-[13px] font-medium">${t('cfCancel')}</button>
+                            <button type="button" id="cfConfirm" onclick="confirmOrder()" ${canConfirm ? '' : 'disabled'}
+                                class="flex-[2] py-2.5 rounded-md text-white text-[13px] font-semibold shopee-bg disabled:opacity-40 disabled:cursor-not-allowed">
+                                ${fill(t(cod ? 'cfConfirmDeposit' : 'cfConfirmPay'), { x: baht(a.now) })}
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function toggleAgree(checked) {
+            confirmAgreed = checked;
+            renderCheckout(currentView);
+        }
+        function closeConfirmSheet() {
+            confirmSheet = false;
+            renderCheckout(currentView);
+        }
+        function confirmOrder() {
+            if (amounts(currentView).choice === 'cod' && !confirmAgreed) return;
+            closeConfirmSheet();
             triggerRiderAction('order');
         }
 
