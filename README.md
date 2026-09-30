@@ -6,8 +6,8 @@ Clickable concept demo of the cash-on-delivery (COD) doorstep flow.
 - **Customer streak** — the buyer-side reward ladder for consecutive successful COD pickups, and the reset rule on refusal.
 - **Green / Yellow / Red customer** — the same jacket at a Shopee-style checkout for three risk tiers, with a quantity selector and a Shopee Voucher picker:
   - **Green:** nothing restricted. COD as normal, vouchers in full, and the order joins the Priority delivery queue.
-  - **Yellow:** COD with conditions: one-tap order confirmation by SMS/LINE before packing, a ฿2,000 COD limit, no vouchers with COD, and a 20% deposit only on orders over ฿1,000. Paying in advance lifts every condition, vouchers included.
-  - **Red:** no COD, prepay only (ShopeePay, bank transfer, card or QR). Buying is otherwise normal and the only message is "COD isn't available for this order".
+  - **Yellow:** cash on delivery (เก็บเงินปลายทาง) with one condition: a one-tap order confirmation by SMS/LINE before packing. Vouchers work with every payment method, and paying in advance skips the confirmation.
+  - **Red:** cash on delivery suspended for 30 days. The option is locked and shows the date it comes back; prepaid methods (ShopeePay, bank transfer, card, QR) and vouchers work as normal.
 
 Thai / English switch in the top bar (remembered per browser). On phones the app fills the screen; on tablets and desktops it is shown inside a phone frame.
 

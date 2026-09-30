@@ -565,23 +565,19 @@
         // Checkout for Green / Yellow / Red customers
         //   green  → nothing restricted: COD as normal, vouchers in full, and the
         //            order goes into the Priority delivery queue
-        //   yellow → COD with conditions: one-tap order confirmation by SMS/LINE
-        //            before packing, a COD value limit, no vouchers with COD, and a
-        //            deposit only on large orders. Paying in advance lifts them all.
-        //   red    → no COD, prepay only (transfer / card / QR / ShopeePay). Buying
-        //            is otherwise normal; the only message is "COD isn't available".
+        //   yellow → cash on delivery with one condition: a one-tap order
+        //            confirmation by SMS/LINE before packing. Paying in advance skips it.
+        //   red    → COD suspended for 30 days: the option is locked and shows when
+        //            it comes back. Prepaid methods work as normal.
         // ------------------------------------------------------------------
         const PRICE = { item: 510, ship: 40 };
         const MAX_QTY = 5;
-        const YELLOW_COD = { cap: 2000, depositOver: 1000, depositRate: 0.2 };
         const METHODS = ['cod', 'spay', 'bank', 'card', 'qr'];
         const METHOD_ICON = { cod: 'banknote', spay: 'wallet', bank: 'landmark', card: 'credit-card', qr: 'qr-code' };
         const ORDER_NO = '241001SPX0142';
         const payChoice = { green: 'cod', yellow: 'cod', red: 'spay' };
         const qty = { green: 1, yellow: 1, red: 1 };
         const voucherSel = { green: null, yellow: null, red: null };
-        const voucherRemoved = { green: false, yellow: false, red: false };
-        const codDropped = { green: false, yellow: false, red: false };
         let voucherSheet = null;   // null when closed, otherwise the voucher id picked in the sheet (or '')
         let lineConfirmed = false; // yellow COD: has the customer tapped confirm in the SMS/LINE message?
 
@@ -621,51 +617,38 @@
             coPriorityNote: 'ออเดอร์ของคุณเข้าคิวแพ็คและจัดส่งก่อน',
             coOrderTotal: 'ยอดสั่งซื้อทั้งหมด ({n} ชิ้น):',
             coVoucher: 'Shopee Voucher', coVoucherPick: 'เลือกหรือใส่โค้ด',
-            coVoucherRemoved: 'นำโค้ดส่วนลดออกแล้ว เพราะใช้ร่วมกับการเก็บเงินปลายทางไม่ได้',
             coPayTitle: 'วิธีการชำระเงิน',
             coM_cod: 'เก็บเงินปลายทาง', coM_spay: 'ShopeePay', coM_bank: 'โอนเงินผ่านธนาคาร', coM_card: 'บัตรเครดิต/บัตรเดบิต', coM_qr: 'QR พร้อมเพย์',
             coMsub_cod_green: 'ชำระเงินสดกับไรเดอร์เมื่อได้รับสินค้า',
-            coMsub_cod_red: 'ออเดอร์นี้ใช้ COD ไม่ได้',
-            coYellowRules: [
-                'วงเงิน COD ไม่เกิน {cap} ต่อออเดอร์',
-                'ยืนยันออเดอร์ทาง SMS/LINE ก่อนแพ็คสินค้า',
-                'ใช้ร่วมกับโค้ดส่วนลดไม่ได้',
-                'มัดจำ {rate} เฉพาะออเดอร์เกิน {over}'
-            ],
-            coOverCap: 'ยอด {total} เกินวงเงิน COD {cap}',
+            coMsub_cod_yellow: 'ยืนยันออเดอร์ทาง SMS/LINE ก่อนแพ็คสินค้า',
+            coMsub_cod_red: 'ระงับชั่วคราวถึง {date}',
             coMsub_spay: 'ชำระทันทีจากยอดเงินใน ShopeePay',
             coMsub_bank: 'โอนผ่านแอปธนาคารของคุณ',
             coMsub_card: 'Visa, Mastercard, JCB',
             coMsub_qr: 'สแกนจ่ายผ่านแอปธนาคาร',
-            coBadgeLimited: 'มีเงื่อนไข', coBadgeDeposit: 'มัดจำ {x}', coBadgeOver: 'เกินวงเงิน',
-            coPrepaidHint: 'ชำระล่วงหน้าเพื่อปลดเงื่อนไขทั้งหมดทันที และใช้โค้ดส่วนลดได้เต็ม',
-            coCodDropped: 'ยอดเกินวงเงิน COD ของคุณ กรุณาเลือกชำระล่วงหน้า หรือลดจำนวนสินค้า',
+            coBadgeLimited: 'มีเงื่อนไข', coBadgeLocked: 'ใช้ไม่ได้',
             coDetails: 'รายละเอียดการชำระเงิน',
             coSubtotal: 'รวมการสั่งซื้อ', coShipping: 'การจัดส่ง', coDiscount: 'ส่วนลดจาก Shopee Voucher', coGrand: 'ยอดชำระเงินทั้งหมด',
-            coPayNow: 'ชำระมัดจำตอนนี้', coPayLater: 'ชำระปลายทาง',
-            coBarTotal: 'ยอดชำระทั้งหมด', coBarSave: 'ประหยัด {x}', coBarNow: 'มัดจำตอนนี้ {x}', coPickPay: 'เลือกวิธีชำระเงิน',
+            coBarTotal: 'ยอดชำระทั้งหมด', coBarSave: 'ประหยัด {x}',
             coPlace: 'สั่งสินค้า',
 
             vTitle: 'เลือก Shopee Voucher',
-            vBlocked: 'โค้ดส่วนลดใช้ร่วมกับการเก็บเงินปลายทางไม่ได้ ชำระล่วงหน้าเพื่อใช้ส่วนลด',
-            vSwitch: 'เปลี่ยนเป็น ShopeePay',
-            vNotCod: 'ใช้กับการเก็บเงินปลายทางไม่ได้',
             vExpiry: 'หมดอายุใน 3 วัน',
             vSave: 'ส่วนลด {x}', vNoneSel: 'ยังไม่ได้เลือกโค้ด',
             vOk: 'ตกลง', vClose: 'ปิด',
 
             orderDone: 'สั่งซื้อสำเร็จ',
             orderCod: 'ชำระ {total} เป็นเงินสดกับไรเดอร์เมื่อได้รับสินค้า',
-            orderDeposit: 'ชำระมัดจำ {now} แล้ว ที่เหลือ {later} ชำระกับไรเดอร์เมื่อได้รับสินค้า',
             orderPaid: 'ชำระเงิน {total} ผ่าน {method} เรียบร้อยแล้ว',
             orderVoucher: 'ใช้ Shopee Voucher ประหยัด {x}',
             orderNote_green: '🚀 ออเดอร์ของคุณอยู่ในคิวจัดส่ง Priority',
-            orderNote_yellowPaid: 'ชำระล่วงหน้าแล้ว ออเดอร์นี้ไม่มีเงื่อนไข COD',
+            orderNote_yellowPaid: 'ชำระล่วงหน้าแล้ว ไม่ต้องยืนยันออเดอร์',
+            orderNote_red: 'COD จะกลับมาใช้ได้ในวันที่ {date}',
             orderWaitTitle: 'สั่งซื้อสำเร็จ · รอยืนยันออเดอร์',
             orderWaitDesc: 'เราส่งข้อความไปทาง LINE และ SMS แล้ว กดยืนยันเพื่อให้ร้านค้าเริ่มแพ็คสินค้า',
             orderConfirmedTitle: 'ยืนยันออเดอร์แล้ว',
             lineFrom: 'Shopee', lineVia: 'LINE · SMS',
-            lineMsg: 'ยืนยันออเดอร์ #{no}\n{item} ×{n}\nชำระปลายทาง {cod}\nกดยืนยันเพื่อให้ร้านค้าเริ่มแพ็คสินค้า',
+            lineMsg: 'ยืนยันออเดอร์ #{no}\n{item} ×{n}\nเก็บเงินปลายทาง {cod}\nกดยืนยันเพื่อให้ร้านค้าเริ่มแพ็คสินค้า',
             lineBtn: 'ยืนยันออเดอร์',
             lineDone: 'ยืนยันแล้ว ร้านค้ากำลังแพ็คสินค้า'
         });
@@ -684,51 +667,38 @@
             coPriorityNote: 'Your order is packed and shipped first',
             coOrderTotal: 'Order total ({n} {unit}):',
             coVoucher: 'Shopee Voucher', coVoucherPick: 'Select or enter code',
-            coVoucherRemoved: 'Voucher removed: it can\'t be combined with cash on delivery',
             coPayTitle: 'Payment method',
             coM_cod: 'Cash on delivery', coM_spay: 'ShopeePay', coM_bank: 'Bank transfer', coM_card: 'Credit / debit card', coM_qr: 'PromptPay QR',
             coMsub_cod_green: 'Pay the rider in cash when it arrives',
-            coMsub_cod_red: 'COD isn\'t available for this order',
-            coYellowRules: [
-                'COD up to {cap} per order',
-                'Confirm by SMS/LINE before packing',
-                'Can\'t be combined with vouchers',
-                '{rate} deposit only on orders over {over}'
-            ],
-            coOverCap: '{total} is over your COD limit of {cap}',
+            coMsub_cod_yellow: 'Confirm your order by SMS/LINE before it is packed',
+            coMsub_cod_red: 'Suspended until {date}',
             coMsub_spay: 'Pay now from your ShopeePay balance',
             coMsub_bank: 'Transfer from your banking app',
             coMsub_card: 'Visa, Mastercard, JCB',
             coMsub_qr: 'Scan to pay in your banking app',
-            coBadgeLimited: 'Limited', coBadgeDeposit: '{x} deposit', coBadgeOver: 'Over limit',
-            coPrepaidHint: 'Pay in advance to lift all of these conditions at once, with full use of vouchers.',
-            coCodDropped: 'This order is over your COD limit. Pay in advance or reduce the quantity.',
+            coBadgeLimited: 'Limited', coBadgeLocked: 'Unavailable',
             coDetails: 'Payment details',
             coSubtotal: 'Merchandise subtotal', coShipping: 'Shipping', coDiscount: 'Shopee Voucher discount', coGrand: 'Total payment',
-            coPayNow: 'Deposit now', coPayLater: 'Pay on delivery',
-            coBarTotal: 'Total', coBarSave: 'Saved {x}', coBarNow: 'Deposit now {x}', coPickPay: 'Choose a payment method',
+            coBarTotal: 'Total', coBarSave: 'Saved {x}',
             coPlace: 'Place order',
 
             vTitle: 'Select Shopee Voucher',
-            vBlocked: 'Vouchers can\'t be combined with cash on delivery. Pay in advance to use one.',
-            vSwitch: 'Switch to ShopeePay',
-            vNotCod: 'Not valid with cash on delivery',
             vExpiry: 'Expires in 3 days',
             vSave: 'Discount {x}', vNoneSel: 'No voucher selected',
             vOk: 'OK', vClose: 'Close',
 
             orderDone: 'Order placed',
             orderCod: 'Pay {total} in cash to the rider when it arrives.',
-            orderDeposit: 'Your {now} deposit is paid. Pay the remaining {later} to the rider on delivery.',
             orderPaid: 'You paid {total} with {method}.',
             orderVoucher: 'Shopee Voucher saved you {x}',
             orderNote_green: '🚀 Your order is in the Priority delivery queue',
-            orderNote_yellowPaid: 'Paid in advance, so no COD conditions apply to this order',
+            orderNote_yellowPaid: 'Paid in advance, so no order confirmation is needed',
+            orderNote_red: 'COD will be available again on {date}.',
             orderWaitTitle: 'Order placed · please confirm',
             orderWaitDesc: 'We\'ve sent you a message on LINE and SMS. Tap confirm so the shop can start packing.',
             orderConfirmedTitle: 'Order confirmed',
             lineFrom: 'Shopee', lineVia: 'LINE · SMS',
-            lineMsg: 'Confirm order #{no}\n{item} ×{n}\nPay on delivery: {cod}\nTap confirm so the shop can start packing.',
+            lineMsg: 'Confirm order #{no}\n{item} ×{n}\nCash on delivery: {cod}\nTap confirm so the shop can start packing.',
             lineBtn: 'Confirm order',
             lineDone: 'Confirmed. The shop is packing your order.'
         });
@@ -736,33 +706,22 @@
         const baht = (n) => '฿' + n.toLocaleString('en-US');
         const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
         const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
-        // Yellow and red may not use a voucher while paying by COD.
-        const voucherBlocked = (tier, method) => tier !== 'green' && method === 'cod';
+        function suspendUntil() {
+            const d = new Date();
+            d.setDate(d.getDate() + 30);
+            return d.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
         const subtotal = (tier) => PRICE.item * qty[tier];
         const discountOf = (tier, id) => id ? voucherById(id).off(subtotal(tier)) : 0;
 
-        // Why COD can't be used for this cart right now (empty when it can).
-        function codBlockers(tier) {
-            if (tier === 'red') return ['red'];
-            if (tier === 'yellow' && subtotal(tier) + PRICE.ship > YELLOW_COD.cap) return ['cap'];
-            return [];
-        }
+        const codLocked = (tier) => tier === 'red';
 
         function amounts(tier) {
             const choice = payChoice[tier];
             const sub = subtotal(tier);
             const discount = discountOf(tier, voucherSel[tier]);
             const gross = sub + PRICE.ship;
-            const total = gross - discount;
-            const cod = choice === 'cod';
-            const deposit = cod && tier === 'yellow' && gross > YELLOW_COD.depositOver;
-            const depositAmt = Math.round(total * YELLOW_COD.depositRate);
-            const now = !choice ? 0 : !cod ? total : deposit ? depositAmt : 0;
-            return { choice, sub, discount, gross, total, deposit, depositAmt, now, later: total - now };
-        }
-        function ruleVars(tier) {
-            return { cap: baht(YELLOW_COD.cap), over: baht(YELLOW_COD.depositOver), rate: Math.round(YELLOW_COD.depositRate * 100) + '%',
-                     total: baht(subtotal(tier) + PRICE.ship) };
+            return { choice, sub, discount, gross, total: gross - discount };
         }
 
         function renderCheckout(tier, resetScroll) {
@@ -773,43 +732,26 @@
             const who = CUSTOMERS[tier];
             const person = who[lang];
             const a = amounts(tier);
-            const blockers = codBlockers(tier);
-            const rv = ruleVars(tier);
             const priority = tier === 'green';
             const row = (label, value, cls = '') => `<div class="flex justify-between gap-3 ${cls}"><span>${label}</span><span class="shrink-0">${value}</span></div>`;
 
             const methods = METHODS.map(m => {
                 const isCod = m === 'cod';
-                const locked = isCod && blockers.length > 0;
+                const locked = isCod && codLocked(tier);
                 const selected = a.choice === m;
-                let sub = t('coMsub_' + m);
-                let rules = '';
-                let badge = '';
-                if (isCod && tier === 'green') sub = t('coMsub_cod_green');
-                if (isCod && tier === 'red') sub = t('coMsub_cod_red');
-                if (isCod && tier === 'yellow') {
-                    const depositNow = subtotal(tier) + PRICE.ship > YELLOW_COD.depositOver;
-                    sub = locked ? fill(t('coOverCap'), rv) : '';
-                    badge = locked
-                        ? `<span class="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">${t('coBadgeOver')}</span>`
-                        : depositNow
-                        ? `<span class="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">${fill(t('coBadgeDeposit'), { x: baht(Math.round((subtotal(tier) + PRICE.ship) * YELLOW_COD.depositRate)) })}</span>`
-                        : `<span class="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">${t('coBadgeLimited')}</span>`;
-                    if (!locked) {
-                        rules = `<span class="block mt-0.5 space-y-0.5">${t('coYellowRules').map((r, i) =>
-                            `<span class="flex items-start gap-1 text-[11px] ${i === 3 && depositNow ? 'text-amber-800 font-semibold' : 'text-gray-500'}"><span class="shrink-0">•</span><span>${fill(r, rv)}</span></span>`).join('')}</span>`;
-                    }
-                }
+                const sub = isCod ? fill(t('coMsub_cod_' + tier), { date: suspendUntil() }) : t('coMsub_' + m);
+                const badge = isCod && tier === 'yellow'
+                    ? `<span class="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">${t('coBadgeLimited')}</span>`
+                    : locked ? `<span class="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200">${t('coBadgeLocked')}</span>` : '';
                 return `
                     <button type="button" id="pay-${m}" onclick="selectPay('${tier}','${m}')" aria-pressed="${selected}" ${locked ? 'aria-disabled="true"' : ''}
                         class="w-full flex items-center gap-3 px-4 py-3 text-left border-t border-gray-100 first:border-t-0 ${locked ? 'bg-gray-50' : 'hover:bg-orange-50/40'}">
-                        <i data-lucide="${METHOD_ICON[m]}" class="w-5 h-5 shrink-0 ${locked ? 'text-gray-300' : 'text-[#EE4D2D]'}"></i>
+                        <i data-lucide="${locked ? 'lock' : METHOD_ICON[m]}" class="w-5 h-5 shrink-0 ${locked ? 'text-gray-400' : 'text-[#EE4D2D]'}"></i>
                         <span class="flex-1 min-w-0">
-                            <span class="flex items-center flex-wrap text-[13px] ${locked ? 'text-gray-400' : 'text-gray-800'}">${t('coM_' + m)}${badge}</span>
-                            ${sub ? `<span class="block text-[11px] ${locked ? 'text-gray-500' : 'text-gray-500'}">${sub}</span>` : ''}
-                            ${rules}
+                            <span class="flex items-center flex-wrap text-[13px] ${locked ? 'text-gray-400 line-through' : 'text-gray-800'}">${t('coM_' + m)}${badge}</span>
+                            <span class="block text-[11px] ${locked ? 'text-rose-500' : isCod && tier === 'yellow' ? 'text-amber-700' : 'text-gray-500'}">${sub}</span>
                         </span>
-                        <span class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${locked ? 'border-gray-200 bg-gray-100' : selected ? 'border-[#EE4D2D]' : 'border-gray-300'}">
+                        <span class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${selected ? 'border-[#EE4D2D]' : 'border-gray-300'}">
                             ${selected ? '<span class="w-2.5 h-2.5 rounded-full bg-[#EE4D2D]"></span>' : ''}
                         </span>
                     </button>`;
@@ -895,13 +837,10 @@
                         ${voucherValue}
                         <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 shrink-0"></i>
                     </button>
-                    ${voucherRemoved[tier] ? `<p class="bg-amber-50 text-amber-800 text-[11px] px-4 py-2 flex items-start gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>${t('coVoucherRemoved')}</p>` : ''}
 
                     <!-- Payment method -->
                     <div class="bg-white mt-2">
                         <p class="px-4 pt-3 pb-1 text-[13px] font-medium text-gray-800">${t('coPayTitle')}</p>
-                        ${tier === 'yellow' ? `<p class="mx-4 mb-1 p-2 rounded bg-emerald-50 text-emerald-800 text-[11px] flex items-start gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>${t('coPrepaidHint')}</p>` : ''}
-                        ${codDropped[tier] && !a.choice ? `<p class="mx-4 mb-1 p-2 rounded bg-gray-100 text-gray-700 text-[11px] flex items-start gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>${t('coCodDropped')}</p>` : ''}
                         <div>${methods}</div>
                     </div>
 
@@ -912,7 +851,6 @@
                         ${row(t('coShipping'), baht(PRICE.ship))}
                         ${a.discount ? row(t('coDiscount'), '-' + baht(a.discount), 'text-[#EE4D2D]') : ''}
                         ${row(t('coGrand'), baht(a.total), 'text-[14px] text-gray-800 pt-1.5 border-t border-gray-100 [&>span:last-child]:text-[#EE4D2D] [&>span:last-child]:font-semibold')}
-                        ${a.deposit ? row(t('coPayNow'), baht(a.now), 'text-amber-800 font-semibold') + row(t('coPayLater'), baht(a.later)) : ''}
                     </div>
                 </div>
 
@@ -921,11 +859,8 @@
                     <div class="flex flex-col items-end justify-center px-3 py-2 min-w-0">
                         <span class="text-[12px] text-gray-700">${t('coBarTotal')} <span class="text-[#EE4D2D] text-base font-semibold">${baht(a.total)}</span></span>
                         ${a.discount ? `<span class="text-[11px] text-[#EE4D2D]">${fill(t('coBarSave'), { x: baht(a.discount) })}</span>` : ''}
-                        ${a.deposit ? `<span class="text-[11px] font-semibold text-amber-700">${fill(t('coBarNow'), { x: baht(a.now) })}</span>` : ''}
-                        ${!a.choice ? `<span class="text-[11px] font-semibold text-gray-600">${t('coPickPay')}</span>` : ''}
                     </div>
-                    <button type="button" onclick="placeOrder('${tier}')" ${a.choice ? '' : 'disabled'}
-                        class="shopee-bg text-white text-sm font-medium px-7 hover:brightness-105 active:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed">${t('coPlace')}</button>
+                    <button type="button" onclick="placeOrder('${tier}')" class="shopee-bg text-white text-sm font-medium px-7 hover:brightness-105 active:brightness-95">${t('coPlace')}</button>
                 </div>
 
                 ${voucherSheet !== null ? renderVoucherSheet(tier) : ''}`;
@@ -936,13 +871,12 @@
 
         // Voucher picker: a bottom sheet inside the phone screen, like the app's.
         function renderVoucherSheet(tier) {
-            const blocked = voucherBlocked(tier, payChoice[tier]);
             const cards = VOUCHERS.map(v => {
                 const picked = voucherSheet === v.id;
                 const txt = v[lang];
                 return `
-                    <button type="button" ${blocked ? 'disabled' : `onclick="pickVoucher('${v.id}')"`} aria-pressed="${picked}"
-                        class="w-full flex items-stretch text-left rounded-md overflow-hidden border ${picked ? 'border-[#EE4D2D]' : 'border-gray-200'} ${blocked ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:border-orange-300'}">
+                    <button type="button" onclick="pickVoucher('${v.id}')" aria-pressed="${picked}"
+                        class="w-full flex items-stretch text-left rounded-md overflow-hidden border ${picked ? 'border-[#EE4D2D]' : 'border-gray-200 hover:border-orange-300'}">
                         <span class="w-20 shrink-0 shopee-bg text-white flex flex-col items-center justify-center gap-1 py-3 border-r-2 border-dashed border-white/70">
                             <i data-lucide="shopping-bag" class="w-6 h-6"></i>
                             <span class="text-[10px] font-bold">Shopee</span>
@@ -950,7 +884,7 @@
                         <span class="flex-1 min-w-0 px-3 py-2.5 bg-white">
                             <span class="block text-[13px] font-medium text-gray-800">${txt.title}</span>
                             <span class="block text-[11px] text-gray-500">${txt.cond}</span>
-                            <span class="block text-[11px] ${blocked ? 'text-rose-600 font-medium' : 'text-gray-400'}">${blocked ? t('vNotCod') : t('vExpiry')}</span>
+                            <span class="block text-[11px] text-gray-400">${t('vExpiry')}</span>
                         </span>
                         <span class="self-center pr-3 bg-white">
                             <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center ${picked ? 'border-[#EE4D2D]' : 'border-gray-300'}">
@@ -968,11 +902,6 @@
                             <h2 class="flex-1 text-[15px] font-medium text-gray-800">${t('vTitle')}</h2>
                             <button type="button" onclick="closeVoucherSheet()" aria-label="${t('vClose')}" class="p-1 -m-1 text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
                         </div>
-                        ${blocked ? `
-                        <div class="mx-3 mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[12px] leading-relaxed">
-                            <p class="flex items-start gap-1.5"><i data-lucide="ticket-x" class="w-4 h-4 shrink-0 mt-0.5"></i><span>${t('vBlocked')}</span></p>
-                            <button type="button" onclick="switchPayForVoucher('${tier}')" class="mt-2 text-[12px] font-semibold text-white shopee-bg px-3 py-1.5 rounded-md">${t('vSwitch')}</button>
-                        </div>` : ''}
                         <div class="p-3 space-y-2 overflow-y-auto custom-scrollbar">${cards}</div>
                         <div class="safe-bottom bg-white border-t border-gray-200 px-4 pt-3 flex items-center gap-3">
                             <span class="flex-1 text-[12px] ${pickedOff ? 'text-[#EE4D2D] font-medium' : 'text-gray-500'}">${pickedOff ? fill(t('vSave'), { x: baht(pickedOff) }) : t('vNoneSel')}</span>
@@ -991,19 +920,12 @@
             renderCheckout(currentView);
         }
         function pickVoucher(id) {
-            if (voucherBlocked(currentView, payChoice[currentView])) return;
             voucherSheet = voucherSheet === id ? '' : id;   // tap again to deselect
             renderCheckout(currentView);
         }
         function applyVoucher(tier) {
-            if (!voucherBlocked(tier, payChoice[tier])) {
-                voucherSel[tier] = voucherSheet || null;
-                if (voucherSel[tier]) voucherRemoved[tier] = false;
-            }
+            voucherSel[tier] = voucherSheet || null;
             closeVoucherSheet();
-        }
-        function switchPayForVoucher(tier) {
-            selectPay(tier, 'spay');
         }
 
         function nudge(el) {
@@ -1013,35 +935,21 @@
         }
 
         function selectPay(tier, method) {
-            if (method === 'cod' && codBlockers(tier).length) {
-                // COD isn't available for this cart: shake the row instead of selecting it.
+            if (method === 'cod' && codLocked(tier)) {
+                // COD is suspended for this customer: shake the row instead of selecting it.
                 nudge(document.getElementById('pay-cod'));
                 return;
             }
             payChoice[tier] = method;
-            codDropped[tier] = false;
-            // Yellow/red: switching to COD drops any applied voucher, and says so.
-            if (voucherBlocked(tier, method) && voucherSel[tier]) {
-                voucherSel[tier] = null;
-                voucherRemoved[tier] = true;
-            } else if (method !== 'cod') {
-                voucherRemoved[tier] = false;
-            }
             renderCheckout(tier);
         }
 
         function changeQty(tier, delta) {
             qty[tier] = Math.min(MAX_QTY, Math.max(1, qty[tier] + delta));
-            // A bigger cart can push a yellow COD order over its limit: drop COD and ask for another method.
-            if (payChoice[tier] === 'cod' && codBlockers(tier).length) {
-                payChoice[tier] = null;
-                codDropped[tier] = true;
-            }
             renderCheckout(tier);
         }
 
         function placeOrder(tier) {
-            if (!payChoice[tier]) return;
             lineConfirmed = false;
             triggerRiderAction('order');
         }
@@ -1055,14 +963,14 @@
             const tier = currentView;
             const a = amounts(tier);
             const cod = a.choice === 'cod';
-            const vars = { total: baht(a.total), now: baht(a.now), later: baht(a.later), method: t('coM_' + a.choice) };
+            const vars = { total: baht(a.total), method: t('coM_' + a.choice), date: suspendUntil() };
             const iconArea = document.getElementById('modalHeaderIcon');
             const title = document.getElementById('modalTitle');
             const desc = document.getElementById('modalDescription');
             const area = document.getElementById('modalInteractiveArea');
             const voucherLine = a.discount
                 ? `<div class="mb-2 border border-orange-200 bg-orange-50 text-[#EE4D2D] p-2.5 rounded-xl text-xs text-center font-semibold">${fill(t('orderVoucher'), { x: baht(a.discount) })}</div>` : '';
-            const payLine = fill(t(!cod ? 'orderPaid' : a.deposit ? 'orderDeposit' : 'orderCod'), vars);
+            const payLine = fill(t(cod ? 'orderCod' : 'orderPaid'), vars);
 
             // Yellow + COD: the order waits for a one-tap confirmation sent by SMS/LINE before packing.
             if (tier === 'yellow' && cod) {
@@ -1071,7 +979,7 @@
                 iconArea.innerHTML = `<i data-lucide="${lineConfirmed ? 'circle-check' : 'message-square-more'}" class="w-8 h-8"></i>`;
                 title.textContent = t(lineConfirmed ? 'orderConfirmedTitle' : 'orderWaitTitle');
                 desc.textContent = lineConfirmed ? payLine : t('orderWaitDesc');
-                const msg = esc(fill(t('lineMsg'), { no: ORDER_NO, item: t('coProduct'), n: qty[tier], cod: baht(a.later) })).replace(/\n/g, '<br>');
+                const msg = esc(fill(t('lineMsg'), { no: ORDER_NO, item: t('coProduct'), n: qty[tier], cod: baht(a.total) })).replace(/\n/g, '<br>');
                 area.innerHTML = `
                     <div class="rounded-2xl bg-[#8CABD9]/30 p-3">
                         <div class="flex items-center gap-2 mb-2">
@@ -1085,7 +993,7 @@
                                 ? `<p class="mt-2.5 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-center flex items-center justify-center gap-1.5"><i data-lucide="check" class="w-4 h-4"></i>${t('lineDone')}</p>`
                                 : `<button type="button" onclick="confirmViaLine()" class="mt-2.5 w-full py-2 rounded-lg bg-[#06C755] text-white font-semibold hover:brightness-105 active:scale-[0.98]">${t('lineBtn')}</button>`}
                         </div>
-                    </div>` + (a.deposit && !lineConfirmed ? `<p class="mt-2 text-[11px] text-center text-amber-700 font-semibold">${payLine}</p>` : '');
+                    </div>`;
                 return;
             }
 
@@ -1093,8 +1001,8 @@
             iconArea.innerHTML = '<i data-lucide="circle-check" class="w-8 h-8"></i>';
             title.textContent = t('orderDone');
             desc.textContent = payLine;
-            const note = tier === 'green' ? t('orderNote_green') : tier === 'yellow' ? t('orderNote_yellowPaid') : '';
-            const tone = tier === 'green' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
+            const note = fill(t({ green: 'orderNote_green', yellow: 'orderNote_yellowPaid', red: 'orderNote_red' }[tier]), vars);
+            const tone = tier === 'red' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
             area.innerHTML = voucherLine + (note ? `<div class="border p-3 rounded-xl text-xs text-center font-semibold ${tone}">${note}</div>` : '');
         }
 
