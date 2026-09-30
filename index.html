@@ -566,16 +566,15 @@
         //   green  → nothing restricted: COD as normal, vouchers in full, and the
         //            order goes into the Priority delivery queue
         //   yellow → cash on delivery with a one-tap SMS/LINE order confirmation
-        //            before packing. Three more conditions stay out of sight until
-        //            the cart actually triggers them: a value limit, no vouchers
-        //            with cash on delivery, and a deposit on large orders.
-        //            Paying in advance avoids all of them.
+        //            before packing. Two more conditions stay out of sight until
+        //            the cart actually triggers them: a value limit, and no
+        //            vouchers with cash on delivery. Paying in advance avoids both.
         //   red    → COD suspended for 30 days: the option is locked and shows when
         //            it comes back. Prepaid methods work as normal.
         // ------------------------------------------------------------------
         const PRICE = { item: 510, ship: 40 };
         const MAX_QTY = 5;
-        const YELLOW_COD = { cap: 2000, depositOver: 1000, depositRate: 0.2 };
+        const YELLOW_COD = { cap: 1500 };
         const METHODS = ['cod', 'spay', 'bank', 'card', 'qr'];
         const METHOD_ICON = { cod: 'banknote', spay: 'wallet', bank: 'landmark', card: 'credit-card', qr: 'qr-code' };
         const ORDER_NO = '241001SPX0142';
@@ -629,18 +628,16 @@
             coMsub_cod_green: 'ชำระเงินสดกับไรเดอร์เมื่อได้รับสินค้า',
             coMsub_cod_yellow: 'ยืนยันออเดอร์ทาง SMS/LINE ก่อนแพ็คสินค้า',
             coMsub_cod_red: 'ระงับชั่วคราวถึง {date}',
-            coYellowDeposit: 'ออเดอร์เกิน {over} ชำระมัดจำ {rate} ({x}) ก่อน ส่วนที่เหลือชำระปลายทาง',
             coOverCap: 'ยอด {total} เกินวงเงินเก็บเงินปลายทาง {cap}',
             coMsub_spay: 'ชำระทันทีจากยอดเงินใน ShopeePay',
             coMsub_bank: 'โอนผ่านแอปธนาคารของคุณ',
             coMsub_card: 'Visa, Mastercard, JCB',
             coMsub_qr: 'สแกนจ่ายผ่านแอปธนาคาร',
-            coBadgeLimited: 'มีเงื่อนไข', coBadgeLocked: 'ใช้ไม่ได้', coBadgeDeposit: 'มัดจำ {x}', coBadgeOver: 'เกินวงเงิน',
+            coBadgeLimited: 'มีเงื่อนไข', coBadgeLocked: 'ใช้ไม่ได้', coBadgeOver: 'เกินวงเงิน',
             coCodDropped: 'ยอดเกินวงเงินเก็บเงินปลายทางของคุณ กรุณาเลือกวิธีชำระเงินอื่น หรือลดจำนวนสินค้า',
             coDetails: 'รายละเอียดการชำระเงิน',
             coSubtotal: 'รวมการสั่งซื้อ', coShipping: 'การจัดส่ง', coDiscount: 'ส่วนลดจาก Shopee Voucher', coGrand: 'ยอดชำระเงินทั้งหมด',
-            coPayNow: 'ชำระมัดจำตอนนี้', coPayLater: 'ชำระปลายทาง',
-            coBarTotal: 'ยอดชำระทั้งหมด', coBarSave: 'ประหยัด {x}', coBarNow: 'มัดจำตอนนี้ {x}', coPickPay: 'เลือกวิธีชำระเงิน',
+            coBarTotal: 'ยอดชำระทั้งหมด', coBarSave: 'ประหยัด {x}', coPickPay: 'เลือกวิธีชำระเงิน',
             coPlace: 'สั่งสินค้า',
 
             vTitle: 'เลือก Shopee Voucher',
@@ -653,7 +650,6 @@
 
             orderDone: 'สั่งซื้อสำเร็จ',
             orderCod: 'ชำระ {total} เป็นเงินสดกับไรเดอร์เมื่อได้รับสินค้า',
-            orderDeposit: 'ชำระมัดจำ {now} แล้ว ที่เหลือ {later} ชำระกับไรเดอร์เมื่อได้รับสินค้า',
             orderPaid: 'ชำระเงิน {total} ผ่าน {method} เรียบร้อยแล้ว',
             orderVoucher: 'ใช้ Shopee Voucher ประหยัด {x}',
             orderNote_green: '🚀 ออเดอร์ของคุณอยู่ในคิวจัดส่ง Priority',
@@ -688,18 +684,16 @@
             coMsub_cod_green: 'Pay the rider in cash when it arrives',
             coMsub_cod_yellow: 'Confirm your order by SMS/LINE before it is packed',
             coMsub_cod_red: 'Suspended until {date}',
-            coYellowDeposit: 'Orders over {over} need a {rate} deposit ({x}) now, the rest on delivery',
             coOverCap: '{total} is over your cash-on-delivery limit of {cap}',
             coMsub_spay: 'Pay now from your ShopeePay balance',
             coMsub_bank: 'Transfer from your banking app',
             coMsub_card: 'Visa, Mastercard, JCB',
             coMsub_qr: 'Scan to pay in your banking app',
-            coBadgeLimited: 'Limited', coBadgeLocked: 'Unavailable', coBadgeDeposit: '{x} deposit', coBadgeOver: 'Over limit',
+            coBadgeLimited: 'Limited', coBadgeLocked: 'Unavailable', coBadgeOver: 'Over limit',
             coCodDropped: 'This order is over your cash-on-delivery limit. Choose another payment method or reduce the quantity.',
             coDetails: 'Payment details',
             coSubtotal: 'Merchandise subtotal', coShipping: 'Shipping', coDiscount: 'Shopee Voucher discount', coGrand: 'Total payment',
-            coPayNow: 'Deposit now', coPayLater: 'Pay on delivery',
-            coBarTotal: 'Total', coBarSave: 'Saved {x}', coBarNow: 'Deposit now {x}', coPickPay: 'Choose a payment method',
+            coBarTotal: 'Total', coBarSave: 'Saved {x}', coPickPay: 'Choose a payment method',
             coPlace: 'Place order',
 
             vTitle: 'Select Shopee Voucher',
@@ -712,7 +706,6 @@
 
             orderDone: 'Order placed',
             orderCod: 'Pay {total} in cash to the rider when it arrives.',
-            orderDeposit: 'Your {now} deposit is paid. Pay the remaining {later} to the rider on delivery.',
             orderPaid: 'You paid {total} with {method}.',
             orderVoucher: 'Shopee Voucher saved you {x}',
             orderNote_green: '🚀 Your order is in the Priority delivery queue',
@@ -746,22 +739,14 @@
             if (tier === 'yellow' && gross(tier) > YELLOW_COD.cap) return ['cap'];
             return [];
         }
-        const yellowDeposit = (tier) => Math.round(gross(tier) * YELLOW_COD.depositRate);
-        const needsDeposit = (tier) => tier === 'yellow' && gross(tier) > YELLOW_COD.depositOver;
-
         function amounts(tier) {
             const choice = payChoice[tier];
             const sub = subtotal(tier);
             const discount = discountOf(tier, voucherSel[tier]);
-            const total = gross(tier) - discount;
-            const cod = choice === 'cod';
-            const deposit = cod && needsDeposit(tier);
-            const now = !choice ? 0 : !cod ? total : deposit ? yellowDeposit(tier) : 0;
-            return { choice, sub, discount, gross: gross(tier), total, deposit, now, later: total - now };
+            return { choice, sub, discount, gross: gross(tier), total: gross(tier) - discount };
         }
         function ruleVars(tier) {
-            return { cap: baht(YELLOW_COD.cap), over: baht(YELLOW_COD.depositOver), rate: Math.round(YELLOW_COD.depositRate * 100) + '%',
-                     total: baht(gross(tier)), x: baht(yellowDeposit(tier)), date: suspendUntil() };
+            return { cap: baht(YELLOW_COD.cap), total: baht(gross(tier)), date: suspendUntil() };
         }
 
         function renderCheckout(tier, resetScroll) {
@@ -782,7 +767,6 @@
                 const locked = isCod && codBlockers(tier).length > 0;
                 const selected = a.choice === m;
                 let sub = isCod ? fill(t('coMsub_cod_' + tier), rv) : t('coMsub_' + m);
-                let extra = '';
                 let badge = '';
                 if (isCod && tier === 'red') badge = pill('bg-rose-100 text-rose-700 border border-rose-200', t('coBadgeLocked'));
                 if (isCod && tier === 'yellow') {
@@ -790,9 +774,6 @@
                     if (locked) {
                         badge = pill('bg-gray-200 text-gray-600', t('coBadgeOver'));
                         sub = fill(t('coOverCap'), rv);
-                    } else if (needsDeposit(tier)) {
-                        badge = pill('bg-amber-100 text-amber-800 border border-amber-300', fill(t('coBadgeDeposit'), rv));
-                        extra = `<span class="block text-[11px] text-amber-800 font-semibold">${fill(t('coYellowDeposit'), rv)}</span>`;
                     } else {
                         badge = pill('bg-amber-100 text-amber-800 border border-amber-300', t('coBadgeLimited'));
                     }
@@ -805,7 +786,6 @@
                         <span class="flex-1 min-w-0">
                             <span class="flex items-center flex-wrap text-[13px] ${locked ? 'text-gray-400' : 'text-gray-800'}">${t('coM_' + m)}${badge}</span>
                             <span class="block text-[11px] ${subTone}">${sub}</span>
-                            ${extra}
                         </span>
                         <span class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${selected ? 'border-[#EE4D2D]' : 'border-gray-300'}">
                             ${selected ? '<span class="w-2.5 h-2.5 rounded-full bg-[#EE4D2D]"></span>' : ''}
@@ -909,7 +889,6 @@
                         ${row(t('coShipping'), baht(PRICE.ship))}
                         ${a.discount ? row(t('coDiscount'), '-' + baht(a.discount), 'text-[#EE4D2D]') : ''}
                         ${row(t('coGrand'), baht(a.total), 'text-[14px] text-gray-800 pt-1.5 border-t border-gray-100 [&>span:last-child]:text-[#EE4D2D] [&>span:last-child]:font-semibold')}
-                        ${a.deposit ? row(t('coPayNow'), baht(a.now), 'text-amber-800 font-semibold') + row(t('coPayLater'), baht(a.later)) : ''}
                     </div>
                 </div>
 
@@ -918,7 +897,6 @@
                     <div class="flex flex-col items-end justify-center px-3 py-2 min-w-0">
                         <span class="text-[12px] text-gray-700">${t('coBarTotal')} <span class="text-[#EE4D2D] text-base font-semibold">${baht(a.total)}</span></span>
                         ${a.discount ? `<span class="text-[11px] text-[#EE4D2D]">${fill(t('coBarSave'), { x: baht(a.discount) })}</span>` : ''}
-                        ${a.deposit ? `<span class="text-[11px] font-semibold text-amber-700">${fill(t('coBarNow'), { x: baht(a.now) })}</span>` : ''}
                         ${!a.choice ? `<span class="text-[11px] font-semibold text-gray-600">${t('coPickPay')}</span>` : ''}
                     </div>
                     <button type="button" onclick="placeOrder('${tier}')" ${a.choice ? '' : 'disabled'}
@@ -1053,14 +1031,14 @@
             const tier = currentView;
             const a = amounts(tier);
             const cod = a.choice === 'cod';
-            const vars = { total: baht(a.total), now: baht(a.now), later: baht(a.later), method: t('coM_' + a.choice), date: suspendUntil() };
+            const vars = { total: baht(a.total), method: t('coM_' + a.choice), date: suspendUntil() };
             const iconArea = document.getElementById('modalHeaderIcon');
             const title = document.getElementById('modalTitle');
             const desc = document.getElementById('modalDescription');
             const area = document.getElementById('modalInteractiveArea');
             const voucherLine = a.discount
                 ? `<div class="mb-2 border border-orange-200 bg-orange-50 text-[#EE4D2D] p-2.5 rounded-xl text-xs text-center font-semibold">${fill(t('orderVoucher'), { x: baht(a.discount) })}</div>` : '';
-            const payLine = fill(t(!cod ? 'orderPaid' : a.deposit ? 'orderDeposit' : 'orderCod'), vars);
+            const payLine = fill(t(cod ? 'orderCod' : 'orderPaid'), vars);
 
             // Yellow + cash on delivery: the order waits for a one-tap confirmation sent by SMS/LINE before packing.
             if (tier === 'yellow' && cod) {
@@ -1069,7 +1047,7 @@
                 iconArea.innerHTML = `<i data-lucide="${lineConfirmed ? 'circle-check' : 'message-square-more'}" class="w-8 h-8"></i>`;
                 title.textContent = t(lineConfirmed ? 'orderConfirmedTitle' : 'orderWaitTitle');
                 desc.textContent = lineConfirmed ? payLine : t('orderWaitDesc');
-                const msg = esc(fill(t('lineMsg'), { no: ORDER_NO, item: t('coProduct'), n: qty[tier], cod: baht(a.later) })).replace(/\n/g, '<br>');
+                const msg = esc(fill(t('lineMsg'), { no: ORDER_NO, item: t('coProduct'), n: qty[tier], cod: baht(a.total) })).replace(/\n/g, '<br>');
                 area.innerHTML = `
                     <div class="rounded-2xl bg-[#8CABD9]/30 p-3">
                         <div class="flex items-center gap-2 mb-2">
@@ -1083,7 +1061,7 @@
                                 ? `<p class="mt-2.5 py-2 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-center flex items-center justify-center gap-1.5"><i data-lucide="check" class="w-4 h-4"></i>${t('lineDone')}</p>`
                                 : `<button type="button" onclick="confirmViaLine()" class="mt-2.5 w-full py-2 rounded-lg bg-[#06C755] text-white font-semibold hover:brightness-105 active:scale-[0.98]">${t('lineBtn')}</button>`}
                         </div>
-                    </div>` + (a.deposit && !lineConfirmed ? `<p class="mt-2 text-[11px] text-center text-amber-700 font-semibold">${payLine}</p>` : '');
+                    </div>`;
                 return;
             }
 
