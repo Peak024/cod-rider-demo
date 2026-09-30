@@ -565,8 +565,8 @@
         // Checkout for Green / Yellow / Red customers
         //   green  → nothing restricted: COD as normal, vouchers in full, and the
         //            order goes into the Priority delivery queue
-        //   yellow → cash on delivery with one condition: a one-tap order
-        //            confirmation by SMS/LINE before packing. Paying in advance skips it.
+        //   yellow → cash on delivery with a one-tap order confirmation by SMS/LINE
+        //            before packing (paying in advance skips it), and no Shopee Vouchers.
         //   red    → COD suspended for 30 days: the option is locked and shows when
         //            it comes back. Prepaid methods work as normal.
         // ------------------------------------------------------------------
@@ -616,7 +616,7 @@
             coShipEta: 'จะได้รับภายใน 3–5 วัน', coShipEtaPriority: 'จะได้รับภายใน 2–3 วัน',
             coPriorityNote: 'ออเดอร์ของคุณเข้าคิวแพ็คและจัดส่งก่อน',
             coOrderTotal: 'ยอดสั่งซื้อทั้งหมด ({n} ชิ้น):',
-            coVoucher: 'Shopee Voucher', coVoucherPick: 'เลือกหรือใส่โค้ด',
+            coVoucher: 'Shopee Voucher', coVoucherPick: 'เลือกหรือใส่โค้ด', coVoucherNA: 'ไม่สามารถใช้ได้',
             coPayTitle: 'วิธีการชำระเงิน',
             coM_cod: 'เก็บเงินปลายทาง', coM_spay: 'ShopeePay', coM_bank: 'โอนเงินผ่านธนาคาร', coM_card: 'บัตรเครดิต/บัตรเดบิต', coM_qr: 'QR พร้อมเพย์',
             coMsub_cod_green: 'ชำระเงินสดกับไรเดอร์เมื่อได้รับสินค้า',
@@ -666,7 +666,7 @@
             coShipEta: 'Arrives in 3–5 days', coShipEtaPriority: 'Arrives in 2–3 days',
             coPriorityNote: 'Your order is packed and shipped first',
             coOrderTotal: 'Order total ({n} {unit}):',
-            coVoucher: 'Shopee Voucher', coVoucherPick: 'Select or enter code',
+            coVoucher: 'Shopee Voucher', coVoucherPick: 'Select or enter code', coVoucherNA: 'Not available',
             coPayTitle: 'Payment method',
             coM_cod: 'Cash on delivery', coM_spay: 'ShopeePay', coM_bank: 'Bank transfer', coM_card: 'Credit / debit card', coM_qr: 'PromptPay QR',
             coMsub_cod_green: 'Pay the rider in cash when it arrives',
@@ -715,6 +715,7 @@
         const discountOf = (tier, id) => id ? voucherById(id).off(subtotal(tier)) : 0;
 
         const codLocked = (tier) => tier === 'red';
+        const voucherAllowed = (tier) => tier !== 'yellow';   // yellow customers can't use Shopee Vouchers
 
         function amounts(tier) {
             const choice = payChoice[tier];
@@ -748,7 +749,7 @@
                         class="w-full flex items-center gap-3 px-4 py-3 text-left border-t border-gray-100 first:border-t-0 ${locked ? 'bg-gray-50' : 'hover:bg-orange-50/40'}">
                         <i data-lucide="${locked ? 'lock' : METHOD_ICON[m]}" class="w-5 h-5 shrink-0 ${locked ? 'text-gray-400' : 'text-[#EE4D2D]'}"></i>
                         <span class="flex-1 min-w-0">
-                            <span class="flex items-center flex-wrap text-[13px] ${locked ? 'text-gray-400 line-through' : 'text-gray-800'}">${t('coM_' + m)}${badge}</span>
+                            <span class="flex items-center flex-wrap text-[13px] ${locked ? 'text-gray-400' : 'text-gray-800'}">${t('coM_' + m)}${badge}</span>
                             <span class="block text-[11px] ${locked ? 'text-rose-500' : isCod && tier === 'yellow' ? 'text-amber-700' : 'text-gray-500'}">${sub}</span>
                         </span>
                         <span class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center ${selected ? 'border-[#EE4D2D]' : 'border-gray-300'}">
@@ -831,12 +832,18 @@
                     </div>
 
                     <!-- Shopee Voucher -->
+                    ${voucherAllowed(tier) ? `
                     <button type="button" onclick="openVoucherSheet()" class="w-full bg-white mt-2 px-4 py-3 flex items-center gap-3 text-left hover:bg-orange-50/40">
                         <i data-lucide="ticket-percent" class="w-5 h-5 text-[#EE4D2D] shrink-0"></i>
                         <span class="flex-1 min-w-0 text-[13px] text-gray-800">${t('coVoucher')}</span>
                         ${voucherValue}
                         <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 shrink-0"></i>
-                    </button>
+                    </button>` : `
+                    <div class="w-full bg-white mt-2 px-4 py-3 flex items-center gap-3" aria-disabled="true">
+                        <i data-lucide="ticket-percent" class="w-5 h-5 text-gray-300 shrink-0"></i>
+                        <span class="flex-1 min-w-0 text-[13px] text-gray-400">${t('coVoucher')}</span>
+                        <span class="text-[12px] text-gray-400">${t('coVoucherNA')}</span>
+                    </div>`}
 
                     <!-- Payment method -->
                     <div class="bg-white mt-2">
@@ -912,6 +919,7 @@
         }
 
         function openVoucherSheet() {
+            if (!voucherAllowed(currentView)) return;
             voucherSheet = voucherSel[currentView] || '';
             renderCheckout(currentView);
         }
